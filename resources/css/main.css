@@ -1,0 +1,57 @@
+body {
+    margin-left: 5%;
+    margin-right: 5%;
+    }
+
+    @media only screen and (orientation: landscape) {
+        body {
+            margin-left: 20%;
+            margin-right: 20%;
+        }
+    }
+     h1 {
+         font-size: xx-large;
+         font-weight: bold;
+     }
+     h2 {
+         font-size: smaller;
+     }
+     p {
+         font-size: x-large;
+         margin-bottom: 0.5em;
+     }
+     a {
+         font-size: large;
+     }
+     .text {
+
+     }
+     .small-number {
+         font-size: 18px;
+     }
+     .title {
+         font-size: xx-large;
+         font-weight: bold;
+     }
+     .subtitle {
+         font-size: large;
+         font-weight: bold;
+     }
+
+     .first-page {
+         text-align: center;
+     }
+     .permission {
+         font-size: large;
+         color: red;
+     }
+
+     .copyright {
+         font-size: large;
+     }
+     .logo {
+         text-align: left;
+     }
+     .center-logo {
+        text-align: center;
+    }
