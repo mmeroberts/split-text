@@ -6,7 +6,11 @@
 
 ;;;;;;;; DB;;;;;;;;
 
-
+(defn get-uuid-str []
+  (let [{:keys [status headers body error] :as resp} (client/get (str server "/_uuids"))]
+    (if error
+      nil
+      (first (get (json/read-str body) "uuids")))))
 
 
 (defn db-uri [ host port user passwd db]

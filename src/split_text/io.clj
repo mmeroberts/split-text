@@ -1,7 +1,9 @@
 (ns split-text.io
   (:require [clojure.pprint :as pprint]
             [hickory.core :as h]
-            [clojure.string :as str]))
+            [clojure.data.json :as json]
+            [clojure.string :as str]
+            [clojure.data.json :as json]))
 
 (defn clean [text]
   (-> text
@@ -16,5 +18,8 @@
         parsed-doc (h/parse raw)]
     (h/as-hickory parsed-doc)))
 
-(defn output-content [content output-filename]
+(defn output-pprint [content output-filename]
   (spit output-filename (with-out-str (pprint/pprint content))))
+
+(defn output-json [content output-filename]
+  (spit output-filename (with-out-str (json/write-str content))))
