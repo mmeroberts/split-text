@@ -69,7 +69,7 @@
   (vec(map-indexed #(assoc %2 :index %1) coll)))
 
 (defn append-crux-index [coll nsp]
-  (map-indexed #(assoc %2  :crux.db/id (keyword nsp (str  nsp "-" %1))) coll))
+  (map-indexed #(assoc %2  :book nsp :crux.db/id (keyword nsp (str  nsp "-" %1))) coll))
 
 (defn append-uuid [coll]
   (vec(map #(assoc %1 :_id (get-uuid-str)) coll)))
