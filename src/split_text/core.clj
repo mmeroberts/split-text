@@ -3,6 +3,7 @@
             [split-text.db :refer :all]
             [split-text.io :refer :all]
             [split-text.crux :refer :all]
+            [split-text.meta :refer :all]
             [crux.api :as crux]
             [com.rpl.specter :refer :all]
             [hickory.select :as s]
@@ -129,7 +130,7 @@
             r (cond verse-number? (assoc ff :verse (re-find #"^(?: )?[-0-9]+" z))
                     (= (:tag ff) :p) (assoc ff :verse vn)
                     :else ff)]
-        (recur (inc i) (if verse-number? (re-find #"^(?: )?[0-9]+" z) vn) (conj output (conj '[] (conj '[] r) l)))))))
+        (recur (inc i) (if verse-number? (re-find #"^(?: )?[-0-9]+" z) vn) (conj output (conj '[] (conj '[] r) l)))))))
 
 
 (defn compact-format [content]
@@ -198,14 +199,6 @@
 
 
 
-
-
-
-
-
-
-
-
 (defn process-doc [filename]
   (-> (as-hickory-read-file filename)
       (get-body-tags)
@@ -231,3 +224,8 @@
 (defn get-ready-for-crux [content]
   (-> content
       (append-crux-index book-name)))
+
+
+
+
+;(str/join ""(select [ALL LAST] (get-text cruxdb "James" 1 "1" :bo)))

@@ -9,7 +9,7 @@
                                           crux.kv.rocksdb/kv-store]
                     :crux.kv/db-dir (str (io/file storage-dir "db"))}))
 
-;(def cruxdb (start-rocks-node db))
+(defonce cruxdb (start-rocks-node db))
 
 (defn load-content [db content]
   (for [sp content]
@@ -19,15 +19,62 @@
         sp]])))
 
 
-(defn get-text [db book chapter verse language]
+(defn get-text-by-chapter-and-verse [db book chapter verse language]
   (crux/q (crux/db db)
-          {:find '[e b i s ch vs c]
+          {:find '[e b i s ch vs t st c]
            :where '[[e :book b]
                     [e :chapter ch]
                     [e :verse vs]
                     [e :class l]
+                    [e :tag t]
+                    [e :subtag st]
                     [e :content c]
                     [e :index i]
                     [e :subindex s]]
            :args [{'b book 'ch chapter 'vs verse 'l language}]
            :order-by '[[i :asc] [s :asc]]}))
+
+(defn query-chapter-numbers [db book]
+  (crux/q (crux/db db)
+          {:find '[ch]
+           :where '[[e :book b]
+                    [e :chapter ch]]
+           :args [{'b book}]}))
+
+(defn query-verse-numbers [db book]
+  (crux/q (crux/db db)
+          {:find '[ch vs]
+           :where '[[e :book b]
+                    [e :chapter ch]
+                    [e :verse vs]]
+           :args [{'b book}]}))
+
+(defn query-verse-numbers-by-language [db book lang]
+  (crux/q (crux/db db)
+          {:find '[ch vs]
+           :where '[[e :book b]
+                    [e :chapter ch]
+                    [e :verse vs]
+                    [e :class l]]
+           :args [{'b book 'l lang}]}))
+
+(defn query-verse-numbers-by-chapter [db book chapter]
+  (crux/q (crux/db db)
+          {:find '[ch vs]
+           :where '[[e :book b]
+                    [e :chapter ch]
+                    [e :verse vs]]
+           :args [{'b book 'ch chapter}]
+           :order-by [['vs]]}))
+
+(defn query-book-metadata [db book chapter]
+  (crux/q (crux/db db)
+          {:find '[ch minv maxv]
+           :where '[[e :book b]
+                    [e :chapter ch]
+                    [e :type "metadata"]
+                    [e :min-verse-number minv]
+                    [e :max-verse-number maxv]]
+           :args [{'b book 'ch chapter}]}))
+
+;(crux/entity (crux/db cruxdb) :James/James-14)
