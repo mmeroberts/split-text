@@ -18,10 +18,22 @@
       [[:crux.tx/put
         sp]])))
 
-
-(defn get-text-by-chapter-and-verse [db book chapter verse language]
+(defn query-headings [db book level]
   (crux/q (crux/db db)
-          {:find '[e b i s ch vs t st c]
+          {:find '[ch i s t l c]
+           :where '[[e :book b]
+                    [e :chapter ch]
+                    [e :tag t]
+                    [e :class l]
+                    [e :content c]
+                    [e :index i]
+                    [e :subindex s]]
+           :args [{'b book 't level}]
+           :order-by '[[ch :asc][i :asc] [s :asc]]}))
+
+(defn query-text-by-chapter-and-verse [db book chapter verse language]
+  (crux/q (crux/db db)
+          {:find '[ i  s  t st c]
            :where '[[e :book b]
                     [e :chapter ch]
                     [e :verse vs]
