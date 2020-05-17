@@ -25,7 +25,7 @@
   (let [book-meta (get-verse-numbers-by-language db book language)
         chapters (sort(keys book-meta))]
     (for [chapter chapters]
-      (let [verse-meta (sort-by (juxt :chapter :verse-number) (get book-meta 1))
+      (let [verse-meta (sort-by (juxt :chapter :verse-number) (get book-meta chapter))
             text (for [vm verse-meta]
                    (output-verse-by-language db book chapter (:verse-str vm) language))]
-        text))))
+        (assoc {} :chapter chapter :text text)))))

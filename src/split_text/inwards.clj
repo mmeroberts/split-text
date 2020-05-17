@@ -171,10 +171,10 @@
       (let [this (get doc i)
             verse-number? (contains? (set (vals this))  :verse-number)
             j (inc i)
-            this-content  (if (vector? (:content this)) (:content (get this 0)) (:content this))
+            this-content (if (vector? (:content this)) (get (:content this) 0) (:content this))
             check (if (not (nil? this-content)) (re-find #"^(?: *)[-0-9]+ .+" this-content) this-content)
             ret-map (if verse-number?
-                      (if (nil? check)
+                      (if (empty? check)
                         (let [xt (loop [n j]
                                    (if (or (>= n (count doc)) (not (contains? (set (vals (get doc n))) :blank)))
                                      n

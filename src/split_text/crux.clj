@@ -89,4 +89,5 @@
                     [e :max-verse-number maxv]]
            :args [{'b book 'ch chapter}]}))
 
-;(crux/entity (crux/db cruxdb) :James/James-14)
+(defn get-entity [db id]
+  (crux/entity (crux/db db) id))

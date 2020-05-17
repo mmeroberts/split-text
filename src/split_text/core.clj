@@ -6,7 +6,9 @@
             [split-text.meta :refer :all]
             [split-text.inwards :refer :all]
             [split-text.outwards :refer :all]
-            [crux.api :as crux]))
+            [crux.api :as crux]
+            [clojure.string :as str]
+            [com.rpl.specter :refer :all]))
             ;[com.rpl.specter :refer :all]
             ;[hickory.select :as s]
             ;[clojure.string :as str]
