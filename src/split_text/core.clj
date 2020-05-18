@@ -16,9 +16,9 @@
 
 (def doc (process-doc filename))
 
-(def dbr (get-ready-for-crux doc))
+;(def dbr (get-ready-for-crux doc))
 
-(load-content cruxdb dbr)
+;;(load-content cruxdb dbr)
 
 
 

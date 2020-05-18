@@ -119,17 +119,19 @@
   (loop [i 0 vn "0" output '[]]
     (if (>= i (count doc))
       output
-      (let [sp (get doc i)
-            f (first sp)
-            ff (first f)
-            l (last sp)
-            fl (first l)
-            m (last l)
-            z (get (:content m) 0)
-            verse-number? (contains? (set (vals m)) :verse-number)
-            r (cond verse-number? (assoc ff :verse (re-find #"^(?: )?[-0-9]+" z))
-                    (= (:tag ff) :p) (assoc ff :verse vn)
-                    :else ff)]
+      (let [sp (get doc i) ;[[{:index 0, :tag :p, :chapter 0}] [0 {:content "A2A Part 11: Epistles only", :class :eng}]]
+            f (first sp)   ;[{:index 0, :tag :p, :chapter 0}]
+            ff (first f)   ;{:index 0, :tag :p, :chapter 0}
+            l (last sp)    ;[0 {:content "A2A Part 11: Epistles only", :class :eng}]
+            fl (first l)   ;0
+            m (last l)     ;{:content "A2A Part 11: Epistles only", :class :eng}
+            z (get (:content m) 0) ;"A2A Part 11: Epistles only"
+            verse-number? (or (and (= (:tag f) :p) (= (:chapter ff) 0))
+                              (= (:tag f) :h1)
+                              (contains? (set (vals m)) :verse-number))
+            r (if verse-number? (assoc ff :verse (re-find #"^(?: )?[-0-9]+" z))
+                    ;(= (:tag ff) :p) (assoc ff :verse vn)
+                                (assoc ff :verse vn))]
         (recur (inc i) (if verse-number? (re-find #"^(?: )?[-0-9]+" z) vn) (conj output (conj '[] (conj '[] r) l)))))))
 
 
@@ -208,12 +210,12 @@
       (compact-format)
       (handle-sub-maps)
       (apply-classfication)
-      (set-chapter-number)
-      (set-verse-number)
-      (remove-empty-content)
-      (set-db-format)
-      (link-verses)
-      (set-title)))
+      (set-chapter-number)))
+      ;(set-verse-number)
+      ;(remove-empty-content)
+      ;(set-db-format)
+      ;(link-verses)
+      ;(set-title))
 
 
 
