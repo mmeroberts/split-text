@@ -6,9 +6,10 @@
           [split-text.meta :refer :all]
           [crux.api :as crux]
           [com.rpl.specter :refer :all]
-          [hickory.select :as s]
+          [hickory.render :as hr]
           [clojure.string :as str]
-          [clojure.data.json :as json]))
+          [clojure.data.json :as json]
+          [hiccup2.core :as h]))
 
 (defn filter-bo-with-headings [x]
   (let [tag (:tag x)
@@ -63,6 +64,67 @@
         (assoc {} :chapter chapter :text text)))))
 
 
+(defn output-bo-book-content [content]
+  (filter filter-bo-with-headings content))
+
+(defn cite [text lang]
+  [:p {:class (str/join "-" ["cite" (name lang)])} text])
+
+(defn h1 [text lang]
+  [:h1 {:class (str/join "-" ["h1" (name lang)])} text])
+
+(defn h2 [text lang]
+  [:h2 {:class (str/join "-" ["h2" (name lang)])} text])
+
+(defn u [text lang]
+  [:span {:class (str/join "-" ["u" (name lang)])} text])
+
+(defn div [text]
+  [:div text])
+
+(defn verse [text lang]
+  (let [[n verse](rest(re-find #"^(?: *)([-0-9]+)(.*)" text))]
+    [:p
+     [:span {:class (str/join "-" ["vn" (name lang)]) } n]
+     [:span {:class (str/join "-" [ "v" (name lang)])} verse]]))
+
+(defn render [content]
+  (let [grouped (group-by (juxt :chapter :verse) content)]))
+
+(defn get-chapter-and-verse-numbers [content]
+  (sort(set(select [ALL FIRST] (select [ALL (collect (multi-path :chapter :vint :verse))] content)))))
+
+(defn get-contents [entry]
+  (let [content (:content entry)]
+    (if (vector? content) (str/join "" content)
+                          content)))
+
+(defn output-html [content]
+  (let [working-content content
+        hiccup-content(loop [i 0 holding-lang :eng holding "" output []]
+                        (let [entry (get working-content i)
+                              lang (:class entry)
+                              tag (:tag entry)
+                              text (if (and (contains? #{:cite :h1 :h2} tag))
+                                     ((resolve (read-string (name tag))) (get-contents entry) lang))
+                              this-output (if (or (not (nil? text)) (not= holding-lang lang))
+                                            (if (empty? holding)
+                                              text
+                                              (conj (verse holding holding-lang) text)))
+                              check-holding (if (not (nil? text)) "" holding)
+                              this-holding-lang (if (= (:class entry) :blank) holding-lang lang)
+                              this-holding (str check-holding (if (and (= tag :p) (not= (:class entry) :blank))
+                                                                (if (= (:subtag entry) :u) (u (get-contents entry) lang)
+                                                                                           (get-contents entry))))]
+                          (if (> i (count working-content))
+                            output
+                            (if (= lang :blank)
+                              (recur (inc i) holding-lang holding output)
+                              (recur (inc i) this-holding-lang this-holding (if (not (nil? this-output)) (conj output this-output) output))))))]
+    hiccup-content))
 
 
 
+
+
+;(h/html(into [:div] (output-html (vec(output-bo-book-content doc)))))

@@ -26,8 +26,9 @@
   (assoc sp :sub-type class))
 
 (defn classify-content [sp content]
+  ;(println "cc:" content)
   (if (empty? content)
-    (set-class sp :empty)
+    (set-class sp :blank)
     (let [blank (str/blank? (str/replace content "\u00a0" ""))
           bo (some?(some #(if (>= (int %) 3840) %) content))
           back (str/includes? content "/")
@@ -47,9 +48,7 @@
 
 (defn classify-element [element]
   (cond (map? element) (let [content (:content element)]
-                         (if (and (= (count content) 1) (string? (get content 0)))
-                           (classify-content element (get content 0))
-                           element))
+                         (classify-content element (str/join "" content)))
         (string? element) (let [new-map (assoc {} :content element)]
                             (classify-content new-map element))))
 
@@ -100,7 +99,7 @@
 
 (defn set-chapter-number [doc]
   "takes in compact form of a vector of [[outtag details] [inner tage details]] and looks for chapter tags"
-  (loop [i 0 ch 0 output '[]]
+  (loop [i 0 ch 0 last-tag :p output '[]]
     (if (< i (count doc))
       (let [sp (get doc i)
             f (first sp)
@@ -108,10 +107,10 @@
             l (last sp)
             fl (first l)
             m (last l)
-            chapter? (contains? (set (vals m)) :chapter-number)
-            r (if chapter? (assoc ff :chapter (inc ch))
-                           (assoc ff :chapter ch))]
-        (recur (inc i) (if chapter? (inc ch) ch) (conj output (conj '[] (conj '[] r) l))))
+            this-ch (if (and (= last-tag :p) (= (:tag ff) :h1)) (inc ch) ch)
+            next-last (:tag ff)
+            r (assoc ff :chapter this-ch)]
+        (recur (inc i) this-ch next-last (conj output (conj '[] (conj '[] r) l))))
       output)))
 
 (defn set-verse-number [doc]
@@ -138,8 +137,17 @@
 (defn compact-format [content]
   (select [ALL (collect (submap [:_id :index :tag]))  :content INDEXED-VALS ] content))
 
+(defn transform-second-item [item]
+  ;(println item)
+  (cond (string? item) (assoc {} :content (conj '[] item))
+        (vector? (:content item)) (assoc item :content (conj '[] (str/join (:content item))))))
+
+
+
+
 (defn apply-classfication [content]
-  (vec(transform [ ALL LAST LAST] classify-element content)))
+  (let [intermediate (transform [ALL LAST LAST] transform-second-item content)]
+    (vec (transform [ALL LAST LAST] classify-element intermediate))))
 
 (defn remove-empty-content [content]
   (remove nil? (for [sp content]
@@ -189,6 +197,14 @@
                       this)]
         (recur (inc i) (conj output ret-map))))))
 
+(defn set-verse-int [content]
+  (for [sp content]
+    (let [vrs (:verse sp)]
+        (if (not (nil? vrs))
+          (let [vint (Integer. (re-find #"^[0-9]+" vrs))]
+            (assoc sp :vint vint))
+          sp))))
+
 (defn set-title [content]
   (for [sp content]
     (let [ch (:chapter sp)
@@ -210,12 +226,14 @@
       (compact-format)
       (handle-sub-maps)
       (apply-classfication)
-      (set-chapter-number)))
-      ;(set-verse-number)
-      ;(remove-empty-content)
-      ;(set-db-format)
-      ;(link-verses)
-      ;(set-title))
+      (set-chapter-number)
+      (set-verse-number)
+      (remove-empty-content)
+      (set-db-format)
+      (link-verses)
+      (set-title)
+      (set-verse-int)
+      (vec)))
 
 
 
