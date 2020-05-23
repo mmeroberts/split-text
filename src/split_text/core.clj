@@ -25,3 +25,21 @@
 
 
 ;(str/join ""(select [ALL LAST] (get-text cruxdb "James" 1 "1" :bo)))
+
+(defn join-content [c]
+  (for [e c]
+    (let [[f l] e
+          o (str/join ""(reduce into [] (map #(:content %) l)))
+          x (conj [] f o)] x)))
+
+
+
+(->> (output-bo-book-content doc)
+     (group-by (juxt :chapter :vint :index :tag :class))
+
+     ;(join-content)
+     (sort))
+
+
+     ;(map #(:content %))
+     ;(reduce into []))

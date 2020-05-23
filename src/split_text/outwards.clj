@@ -65,28 +65,38 @@
 
 
 (defn output-bo-book-content [content]
-  (filter filter-bo-with-headings content))
+  (vec(filter filter-bo-with-headings content)))
 
-(defn cite [text lang]
-  [:p {:class (str/join "-" ["cite" (name lang)])} text])
-
-(defn h1 [text lang]
-  [:h1 {:class (str/join "-" ["h1" (name lang)])} text])
-
-(defn h2 [text lang]
-  [:h2 {:class (str/join "-" ["h2" (name lang)])} text])
-
-(defn u [text lang]
-  [:span {:class (str/join "-" ["u" (name lang)])} text])
-
+(defn get-contents [entry]
+  (let [content (:content entry)]
+    (if (vector? content) (str/join "" content)
+                          content)))
 (defn div [text]
   [:div text])
 
-(defn verse [text lang]
-  (let [[n verse](rest(re-find #"^(?: *)([-0-9]+)(.*)" text))]
-    [:p
-     [:span {:class (str/join "-" ["vn" (name lang)]) } n]
-     [:span {:class (str/join "-" [ "v" (name lang)])} verse]]))
+(defn cite [entry lang]
+  [:span {:class (str/join "-" ["cite" (name lang)])} (get-contents entry)])
+
+(defn h1 [entry lang]
+  [:span {:class (str/join "-" ["h1" (name lang)])} (get-contents entry)])
+
+(defn h2 [entry lang]
+  [:span {:class (str/join "-" ["h2" (name lang)])} (get-contents entry)])
+
+(defn u [entry lang]
+  [:span {:class (str/join "-" ["u" (name lang)])} (get-contents entry)])
+
+
+
+(defn p [entry lang]
+  (let [text (get-contents entry)]
+    (cond (= (:subtag entry) :u) (u entry lang)
+          (= (:sub-type entry) :verse-number)  (list [:br][:span {:class "vn"} text])
+          :else [:span {:class (str/join "-" ["v" (name lang)])} text])))
+
+
+
+
 
 (defn render [content]
   (let [grouped (group-by (juxt :chapter :verse) content)]))
@@ -94,37 +104,44 @@
 (defn get-chapter-and-verse-numbers [content]
   (sort(set(select [ALL FIRST] (select [ALL (collect (multi-path :chapter :vint :verse))] content)))))
 
-(defn get-contents [entry]
-  (let [content (:content entry)]
-    (if (vector? content) (str/join "" content)
-                          content)))
+(defn output-header [title]
+  [:head
+   [:title title]
+   [:style (slurp "c:\\Users\\MartinRoberts\\private_projects\\split-text\\resources\\css\\main.css")]])
+   ;(include-js "http://code.angularjs.org/1.2.3/angular.min.js")])
 
-(defn output-html [content]
-  (let [working-content content
-        hiccup-content(loop [i 0 holding-lang :eng holding "" output []]
-                        (let [entry (get working-content i)
-                              lang (:class entry)
-                              tag (:tag entry)
-                              text (if (and (contains? #{:cite :h1 :h2} tag))
-                                     ((resolve (read-string (name tag))) (get-contents entry) lang))
-                              this-output (if (or (not (nil? text)) (not= holding-lang lang))
-                                            (if (empty? holding)
-                                              text
-                                              (conj (verse holding holding-lang) text)))
-                              check-holding (if (not (nil? text)) "" holding)
-                              this-holding-lang (if (= (:class entry) :blank) holding-lang lang)
-                              this-holding (str check-holding (if (and (= tag :p) (not= (:class entry) :blank))
-                                                                (if (= (:subtag entry) :u) (u (get-contents entry) lang)
-                                                                                           (get-contents entry))))]
-                          (if (> i (count working-content))
-                            output
-                            (if (= lang :blank)
-                              (recur (inc i) holding-lang holding output)
-                              (recur (inc i) this-holding-lang this-holding (if (not (nil? this-output)) (conj output this-output) output))))))]
-    hiccup-content))
+
+
+(defn output-html [title content]
+  (let [hiccup-text(for [entry content]
+                     (let [lang (:class entry)
+                           tag (:tag entry)]
+                       ((resolve (read-string (name tag))) entry lang)))
+        hiccup-header (output-header title)]
+    (h/html (list hiccup-header (into [:body ] hiccup-text)))))
+
+
+(def header-regex #"#{1,3}.*")
+(def blank-regex #"^\s$")
+(def text-regex #"^[^#]*")
+
+(defn split-verses [verstr]
+  (select [ALL FIRST] (re-seq #"((?:\d{1,3})\D+)" verstr)))
+
+(defn handle-text [t]
+  "looks for lines of text that are deemed as text - they are not headings or blanks"
+  (loop [[ex & rx :as allt] t ox ()]
+    (cond (and (or(nil? ex)(empty? ex)) (not (nil? rx))) (recur rx ox)
+          (and (nil? ex) (nil? rx))  (into (list (split-verses (str/join " " (flatten ox))) allt))
+          :else (let [header1? (re-find header-regex ex)]
+                  (if header1?
+                    (into (list (split-verses (str/join " "(flatten ox))) allt))
+                    (recur rx (cons ox (list ex))))))))
+
 
 
 
 
 
 ;(h/html(into [:div] (output-html (vec(output-bo-book-content doc)))))
+

@@ -9,26 +9,50 @@ body {
             margin-right: 20%;
         }
     }
-     h1 {
+
+    .cite-eng {
+         font-size: x-large;
+         font-weight: bold;
+         text-align: center;
+         display: block;
+    }
+    .cite-bo  {
          font-size: xx-large;
          font-weight: bold;
-     }
-     h2 {
-         font-size: smaller;
-     }
-     p {
+         text-align: center;
+         display: block;
+    }
+     .h1-eng {
          font-size: x-large;
-         margin-bottom: 0.5em;
+         font-weight: bold;
+         text-align: center;
+         display: block;
      }
-     a {
+     .h1-bo {
+         font-size: xx-large;
+         font-weight: bold;
+         text-align: center;
+     }
+     .h2-eng {
+         font-size: large;
+         font-weight: bold;
+     }
+     .h2-bo {
+         font-size: x-large;
+         font-weight: bold;
+         display: block;
+     }
+     .vn {
+         font-size: small;
+         display: block;
+     }
+     .v-bo {
          font-size: large;
      }
-     .text {
+     .u-bo {
+         color: purple;
+     }
 
-     }
-     .small-number {
-         font-size: 18px;
-     }
      .title {
          font-size: xx-large;
          font-weight: bold;

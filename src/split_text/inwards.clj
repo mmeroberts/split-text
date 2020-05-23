@@ -151,8 +151,9 @@
 
 (defn remove-empty-content [content]
   (remove nil? (for [sp content]
-                 (let [c (select [LAST LAST :content FIRST] sp)]
-                   (if (not (empty? c))
+                 (let [c (select [LAST LAST :content FIRST] sp)
+                       cl (select [LAST LAST :class ] sp)]
+                   (if (or (not= (get cl 0) :blank) (not (empty? c)))
                      sp)))))
 
 (defn set-db-format [content]
@@ -162,7 +163,7 @@
             si (first (last sp)) ; index in second vector
             l (last(last sp)) ; map in second vector
             lt (:tag l) ; tag in second vector - to be renamed sub-tag
-            c (:content l) ; actual content of sp
+            c (if (= lt :u) [ (str/join "" ["$" (get (:content l) 0) "$"])] (:content l)) ; actual content of sp
             cl (:class l)
             sc (:sub-type l)]
         (if (not (nil? sc))
@@ -222,18 +223,18 @@
       (get-body-tags)
       (get-subcontent)
       (get-stripped-content)
-      (append-index)
-      (compact-format)
-      (handle-sub-maps)
-      (apply-classfication)
-      (set-chapter-number)
-      (set-verse-number)
-      (remove-empty-content)
-      (set-db-format)
-      (link-verses)
-      (set-title)
-      (set-verse-int)
-      (vec)))
+      (append-index)))
+      ;(compact-format)
+      ;(handle-sub-maps)
+      ;(apply-classfication)
+      ;(set-chapter-number)
+      ;(set-verse-number)
+      ;(remove-empty-content)
+      ;(set-db-format)
+      ;(link-verses)
+      ;(set-title)
+      ;(set-verse-int)
+      ;(vec)))
 
 
 
@@ -249,3 +250,6 @@
 
 
 ;(str/join ""(select [ALL LAST] (get-text cruxdb "James" 1 "1" :bo)))
+
+;(str/join ""(reduce into [] (map #(:content %) x)))
+
