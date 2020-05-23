@@ -79,3 +79,18 @@ body {
      .center-logo {
         text-align: center;
     }
+        h1 {
+             font-size: 18pt;
+             font-weight: bold;
+             text-align: center;
+         }
+         h2 {
+             font-size: 16pt;
+             font-weight: bold;
+             display: block;
+         }
+         h3 {
+             font-size: 14pt;
+             font-weight: bold;
+             display: block;
+         }
