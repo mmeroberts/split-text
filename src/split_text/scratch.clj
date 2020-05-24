@@ -45,4 +45,7 @@
                       :else (recur r (conj o (str "else:" e))))))))
 
 
-;(select [ALL FIRST] (re-seq #"((?:\d{1,3})\D+)" f))
+;(select [ALL FIRST] (re-seq #"((?:\d{1,3})\D+)" f))#
+
+(use '[clojure.java.shell :only [sh]])
+(sh "doc2docx.bat" "James.doc")

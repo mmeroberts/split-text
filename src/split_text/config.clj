@@ -18,6 +18,9 @@
 (def mod-filename (str main-directory modified-book  ".htm"))
 
 ;;; Config for transformation
+(def stylesheet ".\\resources\\css\\main.css")
+;(def name-highlight  "<span style=\"color:blue;\">$2</span>")
+(def name-highlight  "{$2}")
+(def verse-number-format "<span class=\"vn\">$1</span> $2")
 
-(def name-highlight  "<span style=\"color:blue;\">$2</span>")
 

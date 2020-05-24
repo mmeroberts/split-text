@@ -25,16 +25,16 @@
     (:strings new)))
 
 (defn split-verses [verstr]
-  (select [ALL FIRST] (re-seq #"((?:\d{1,3})\D+)" verstr)))
+  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)\D+)" verstr)))
 
 (defn handle-text [t]
   "looks for lines of text that are deemed as text - they are not headings or blanks"
   (loop [[ex & rx :as allt] t ox ()]
     (cond (and (or(nil? ex)(empty? ex)) (not (nil? rx))) (recur rx ox)
-          (and (nil? ex) (nil? rx))  (into (list (split-verses (str/join " " (flatten ox))) allt))
+          (and (nil? ex) (nil? rx))  (into (list (split-verses (str/join "_" (flatten ox))) allt))
           :else (let [header1? (re-find header-regex ex)]
                   (if header1?
-                    (into (list (split-verses (str/join " "(flatten ox))) allt))
+                    (into (list (split-verses (str/join "_"(flatten ox))) allt))
                     (recur rx (cons ox (list ex))))))))
 
 
@@ -72,10 +72,29 @@
   (map-indexed (fn [idx itm] (assoc itm :index idx)) mt))
 
 (defn replace_underlines [l]
-  (str/replace l #"(\[{1}([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight))
+  (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
+        l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight)
+        l3 (str/replace (str/replace l2 #"\@" "\\[") #"\#" "\\]")]
+    l3))
 
 (defn transform-underlines [md]
   (vec(transform [ALL :text] replace_underlines md)))
+
+(defn handle-verse-number [l]
+  (str/replace l #"^(\d+)(?:\s*)?(.*)" verse-number-format))
+
+(defn transform-verse-numbers [md]
+  (vec(transform [ALL :text] handle-verse-number md)))
+
+(defn handle-joined-lines [e]
+  (let [l (:text e)]
+    (if (= (:lang e) :bo)
+        (assoc e :text (str/replace l #"_" ""))
+        (assoc e :text (str/replace l #"_" " ")))))
+
+
+(defn transform-joined-lines [md]
+  (vec(transform [ALL] handle-joined-lines md)))
 
 (defn process-markdown [md]
   (-> md
@@ -85,7 +104,9 @@
     (classify-language)
     (classify-type)
     (index-lines)
-    (transform-underlines)))
+    (transform-underlines)
+    (transform-verse-numbers)
+    (transform-joined-lines)))
 
 
 (defn process-markdown-file [filename]
@@ -95,20 +116,50 @@
 (defn filter-markdown-for-bo [l]
   (or (and (= (:lang l) :bo) (contains? #{ :verse :h2 :h3} (:type l)))  (= (:type l) :h1)))
 
+(defn filter-markdown-for-boeng [l]
+  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h2 :h3} (:type l)))  (= (:type l) :h1)))
+
+(defn wrap-verse-in-span [l lang]
+  "Wrap a line that starts with a verse number in a span with class of lang"
+  (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
+        sol (subs l 0 end-of-vn-span)
+        span (subs l end-of-vn-span)]
+    (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n")))
+
 (defn output-markdown [md]
   (for [l md]
-
     (let [text (:text l)
-          x (println text)
           type (:type l)
-          out (cond (= type :h1) (str "# " text "\n")
-                    (= type :h2) (str "## " text "\n")
-                    (= type :h3) (str "### " text "\n")
-                    (= type :verse) (str text "\n\n"))]
+          lang (:lang l)
+          out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
+                    (= type :h2) (str "<h2 class=\"h2-" (name lang) "\">" text "</h2>\n")
+                    (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
+                    (= type :verse) (let [itext (wrap-verse-in-span text lang)]
+                                      (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
       out)))
+
+(defn output-div-pairs [md]
+  (let [header (take-while #(= (:type %) :h1) md)
+        outputhead (reduce str(output-markdown header))
+        body (drop (count header) md)
+        outputbody (loop  [[left right & rest] body output ""]
+                     (if (empty? left)
+                       output
+                       (let [spans  (reduce str (doall (output-markdown (into [] (list right left)))))
+                             div (str "<div class=\"verse\">" spans "</div>\n")]
+                         (recur rest (str output div)))))]
+    (str outputhead outputbody)))
+
 
 (defn output-bo-markdown [md]
   (output-markdown (filter filter-markdown-for-bo md)))
 
+(defn output-boeng-markdown [md]
+  (output-markdown (filter filter-markdown-for-boeng md)))
+
+(defn output-boeng-interlinear [md]
+  (output-div-pairs (filter filter-markdown-for-boeng md)))
 ;; post processing
 ;pandoc -s .\ProcessJames.md -c .\resources\css\main.css --metadata title="James" -o ProcessJamesBo.html
+
+;C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s "James.out.md" -A .\resources\html\footer.html -c .\resources\css\main.css    -o "James.html"

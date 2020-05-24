@@ -1,0 +1,1 @@
+C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc --atx-headers -f docx -t markdown "%1.docx"  -o "%1.in.md"

@@ -1,45 +1,99 @@
 (ns split-text.core
   (:require [split-text.config :refer :all]
-            [split-text.db :refer :all]
-            [split-text.io :refer :all]
-            [split-text.crux :refer :all]
-            [split-text.meta :refer :all]
-            [split-text.inwards :refer :all]
-            [split-text.outwards :refer :all]
-            [crux.api :as crux]
-            [clojure.string :as str]
-            [com.rpl.specter :refer :all]
-            [hickory.render :as hr]
-            [hiccup2.core :as h]))
-            ;[com.rpl.specter :refer :all]
-            ;[hickory.select :as s]
-            ;[clojure.string :as str]
-            ;[clojure.data.json :as json]))
-
-(def doc (process-doc filename))
-
-;(def dbr (get-ready-for-crux doc))
-
-;;(load-content cruxdb dbr)
+    [split-text.io :refer :all]
+    ;[split-text.meta :refer :all]
+    ;[split-text.inwards :refer :all]
+    ;[split-text.outwards :refer :all]
+    [split-text.markdown :refer :all]
+    ;[crux.api :as crux]
+    [clojure.string :as str]
+    [com.rpl.specter :refer :all]
+    [hiccup2.core :as h]
+    [clojure.tools.cli :as cli]
+    [clojure.java.shell :as sh])
+  (:gen-class))
 
 
+(def cli-options
+  ;; An option with a required argument
+  [["-f" "--file FILENAME" "Filename (should be a doc file)"]
+   ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
+   ;; A non-idempotent option (:default is applied first)
+   ["-o" "--output OUTPUT"  "Output format - options html or pdf"
+    :default "html"
+    :validate [#(contains? #{"html" "pdf"} % ) "Must be either html or pdf"]]
+   ; Prior to 0.4.1, you would have to use:
+   ;; :assoc-fn (fn [m k _] (update-in m [k] inc))
+   ;; A boolean option defaulting to nil
+   ["-h" "--help"]])
 
-;(str/join ""(select [ALL LAST] (get-text cruxdb "James" 1 "1" :bo)))
+(defn usage [options-summary]
+  (->> ["Format documents"
+        ""
+        "Usage: program-name [options] style"
+        ""
+        "Options:"
+        options-summary
+        ""
+        "Style:"
+        "  bo         Print tibetan - will include english titles"
+        "  eng        Print english text"
+        "  back       Print back translation - will include english titles and headers"
+        "  boeng      Print tibetan and english interleaved"
+        "  boeng-col  Print tibetan and english in columns"
+        "  boback     Print tibetan and back translation interleaved"
+        "  all        Print full document - all languages"
+        ""
+        "Please refer to the manual page for more information."]
+       (str/join \newline)))
 
-(defn join-content [c]
-  (for [e c]
-    (let [[f l] e
-          o (str/join ""(reduce into [] (map #(:content %) l)))
-          x (conj [] f o)] x)))
+(defn error-msg [errors]
+  (str "The following errors occurred while parsing your command:\n\n"
+       (str/join \newline errors)))
+
+(defn validate-args
+  "Validate command line arguments. Either return a map indicating the program
+  should exit (with a error message, and optional ok status), or a map
+  indicating the action the program should take and the options provided."
+  [args]
+  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)]
+    (cond
+      (:help options) ; help => exit OK with usage summary
+      {:exit-message (usage summary) :ok? true}
+      errors ; errors => exit with description of errors
+      {:exit-message (error-msg errors)}
+      ;; custom validation on arguments
+      (and (= 1 (count arguments))
+           (#{"bo" "eng" "back" "boeng" "boeng-cols" "boback" "all"} (first arguments)))
+      {:style (first arguments) :options options}
+      :else ; failed custom validation => exit with usage summary
+      {:exit-message (usage summary)})))
+
+(defn exit [status msg]
+  (println msg)
+  (System/exit status))
+
+(defn handle-document [style options]
+  (let [{:keys [output file]} options
+        filestub (first (str/split file #"\."))
+        markdownfile (str filestub ".in.md")
+        intermediatefilename (str filestub "." style ".out.md")
+        {:keys [exit out err] }(sh/sh "doc2docx.bat" filestub)
+        {:keys [exit out err] }(sh/sh "docx2md.bat" filestub style)]
+
+    (if (not= exit 0) (println err)
+                      (do (case style
+                            "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
+                            "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
+                            "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
+                          (sh/sh "md2out.bat" filestub style output stylesheet)))))
 
 
 
-(->> (output-bo-book-content doc)
-     (group-by (juxt :chapter :vint :index :tag :class))
+(defn -main [& args]
+  (let [{:keys [style options exit-message ok?]} (validate-args args)]
+    (if exit-message
+      (exit (if ok? 0 1) exit-message)
+      (handle-document style options))))
 
-     ;(join-content)
-     (sort))
-
-
-     ;(map #(:content %))
-     ;(reduce into []))
+;(-main "-f" "James.doc" "boeng-cols")

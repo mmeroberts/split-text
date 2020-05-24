@@ -23,3 +23,6 @@
 
 (defn output-json [content output-filename]
   (spit output-filename (with-out-str (json/write-str content))))
+
+(defn output-md [content output-filename]
+  (spit output-filename (reduce str content)))
