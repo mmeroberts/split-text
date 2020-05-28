@@ -1,1 +1,1 @@
-C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s "%1.%2.out.md" --metadata title="%1" -c %4    -o "%1-%2.%3"
+C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s %1 --metadata title="%3" -H %4    -o %2

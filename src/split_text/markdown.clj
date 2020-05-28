@@ -80,6 +80,12 @@
 (defn transform-underlines [md]
   (vec(transform [ALL :text] replace_underlines md)))
 
+(defn handle-bo-brackets [l]
+  (str/replace l #"(\[\d+\]|[\(\)\[\]\:\{\}])" bo-brackets))
+
+(defn surround-bo-brackets [md]
+  (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
+
 (defn handle-verse-number [l]
   (str/replace l #"^(\d+)(?:\s*)?(.*)" verse-number-format))
 
@@ -106,7 +112,8 @@
     (index-lines)
     (transform-underlines)
     (transform-verse-numbers)
-    (transform-joined-lines)))
+    (transform-joined-lines)
+    (surround-bo-brackets)))
 
 
 (defn process-markdown-file [filename]

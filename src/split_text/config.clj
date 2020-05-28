@@ -22,5 +22,10 @@
 ;(def name-highlight  "<span style=\"color:blue;\">$2</span>")
 (def name-highlight  "{$2}")
 (def verse-number-format "<span class=\"vn\">$1</span> $2")
+(def bo-brackets "<span class=\"bo-brackets\">$1</span>")
+
+(def original "pre-processing")
+(def intermediate "_intermediate")
+(def pre-published "pre-published")
 
 

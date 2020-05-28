@@ -16,7 +16,8 @@
 
 (def cli-options
   ;; An option with a required argument
-  [["-f" "--file FILENAME" "Filename (should be a doc file)"]
+  [["-f" "--file FILENAME" "Filename without path or extension"]
+   ["-d" "--directory DIRECTORY" "Directory that contains the working folders"]
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
    ["-o" "--output OUTPUT"  "Output format - options html or pdf"
@@ -73,20 +74,30 @@
   (println msg)
   (System/exit status))
 
+(defn construct-filename [ d s f e]
+  (str  d "\\" s "\\" f e))
+
 (defn handle-document [style options]
-  (let [{:keys [output file]} options
-        filestub (first (str/split file #"\."))
-        markdownfile (str filestub ".in.md")
-        intermediatefilename (str filestub "." style ".out.md")
-        {:keys [exit out err] }(sh/sh "doc2docx.bat" filestub)
-        {:keys [exit out err] }(sh/sh "docx2md.bat" filestub style)]
+  (let [{:keys [output file directory]} options
+        ;filestub (first (str/split file #"\."))
+        docfile (construct-filename directory  original  file ".doc")
+        docxfile (construct-filename directory  intermediate  file ".docx")
+        markdownfile (construct-filename directory  intermediate  file ".in.md")
+        intermediatefilename (construct-filename directory  intermediate  file ".out.md")
+        outputfile (construct-filename directory  pre-published file (str "." output))
+        one (println "doc2docx.bat " docfile " " docxfile)
+        {:keys [exit out err] }(sh/sh "doc2docx.bat" docfile docxfile)
+        two (println "docx2md.bat " docxfile " " markdownfile)
+        {:keys [exit out err] }(sh/sh "docx2md.bat" docxfile markdownfile)]
 
     (if (not= exit 0) (println err)
                       (do (case style
                             "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
                             "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
                             "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
-                          (sh/sh "md2out.bat" filestub style output stylesheet)))))
+                          (println "md2out.bat " intermediatefilename " " outputfile " " file " " stylesheet)
+                          (sh/sh "md2out.bat" intermediatefilename outputfile  file stylesheet)))))
+
 
 
 
