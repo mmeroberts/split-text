@@ -18,6 +18,7 @@
   ;; An option with a required argument
   [["-f" "--file FILENAME" "Filename without path or extension"]
    ["-d" "--directory DIRECTORY" "Directory that contains the working folders"]
+   ["-t" "--title TITLE" "The Title of the document"]
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
    ["-o" "--output OUTPUT"  "Output format - options html or pdf"
@@ -78,7 +79,7 @@
   (str  d "\\" s "\\" f e))
 
 (defn handle-document [style options]
-  (let [{:keys [output file directory]} options
+  (let [{:keys [output file title directory]} options
         ;filestub (first (str/split file #"\."))
         docfile (construct-filename directory  original  file ".doc")
         docxfile (construct-filename directory  intermediate  file ".docx")
@@ -95,8 +96,8 @@
                             "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
                             "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
                             "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
-                          (println "md2out.bat " intermediatefilename " " outputfile " " file " " stylesheet)
-                          (sh/sh "md2out.bat" intermediatefilename outputfile  file stylesheet)))))
+                          (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
+                          (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet)))))
 
 
 

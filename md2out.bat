@@ -1,1 +1,1 @@
-C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s %1 --metadata title="%3" -H %4    -o %2
+C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s %1 --metadata title=%3 -H %4    -o %2

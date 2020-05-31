@@ -135,13 +135,17 @@
         span (subs l end-of-vn-span)]
     (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n")))
 
-(defn output-markdown [md]
+(defn output-markdown [style md]
         (for [l md]
           (let [text (:text l)
                 type (:type l)
                 lang (:lang l)
                 out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
-                          (= type :h2) (str "<h2 class=\"h2-" (name lang) "\">" text "</h2>\n")
+                          (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
+                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             (and (or (= style :boeng)(= style :bo)) (= lang :bo))
+                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
                           (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
                           (= type :verse) (let [itext (wrap-verse-in-span text lang)]
                                             (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
@@ -150,22 +154,22 @@
 
 (defn output-div-pairs [md]
   (let [header (take-while #(= (:type %) :h1) md)
-        outputhead (reduce str(output-markdown header))
+        outputhead (reduce str(output-markdown :boeng-cols header))
         body (drop (count header) md)
         outputbody (loop  [[left right & rest] body output ""]
                      (if (empty? left)
                        output
-                       (let [spans  (reduce str (doall (output-markdown (into [] (list right left)))))
+                       (let [spans  (reduce str (doall (output-markdown :boeng-cols (into [] (list right left)))))
                              div (str "<div class=\"verse\">" spans "</div>\n")]
                          (recur rest (str output div)))))]
     (str outputhead outputbody)))
 
 
 (defn output-bo-markdown [md]
-  (output-markdown (filter filter-markdown-for-bo md)))
+  (output-markdown :bo (filter filter-markdown-for-bo md)))
 
 (defn output-boeng-markdown [md]
-  (output-markdown (filter filter-markdown-for-boeng md)))
+  (output-markdown :boeng (filter filter-markdown-for-boeng md)))
 
 (defn output-boeng-interlinear [md]
   (output-div-pairs (filter filter-markdown-for-boeng md)))

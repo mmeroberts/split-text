@@ -27,4 +27,4 @@
   (spit output-filename (with-out-str (json/write-str content))))
 
 (defn output-md [content output-filename]
-  (spit output-filename (str row-normal-image " " (reduce str content) " " row-tiny-image)))
+  (spit output-filename (str  (reduce str content) " " row-normal-image)))
