@@ -10,6 +10,8 @@
 (def blank-regex #"^\s$")
 (def text-regex #"^[^#]*")
 
+
+
 (defn read-markdown [filename]
   (line-seq(clojure.java.io/reader filename)))
 
@@ -134,16 +136,17 @@
     (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n")))
 
 (defn output-markdown [md]
-  (for [l md]
-    (let [text (:text l)
-          type (:type l)
-          lang (:lang l)
-          out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
-                    (= type :h2) (str "<h2 class=\"h2-" (name lang) "\">" text "</h2>\n")
-                    (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
-                    (= type :verse) (let [itext (wrap-verse-in-span text lang)]
-                                      (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
-      out)))
+        (for [l md]
+          (let [text (:text l)
+                type (:type l)
+                lang (:lang l)
+                out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
+                          (= type :h2) (str "<h2 class=\"h2-" (name lang) "\">" text "</h2>\n")
+                          (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
+                          (= type :verse) (let [itext (wrap-verse-in-span text lang)]
+                                            (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
+            out)))
+
 
 (defn output-div-pairs [md]
   (let [header (take-while #(= (:type %) :h1) md)

@@ -1,8 +1,10 @@
 (ns split-text.io
-  (:require [clojure.pprint :as pprint]
+  (:require [split-text.config :refer :all]
+            [clojure.pprint :as pprint]
             [hickory.core :as h]
             [clojure.data.json :as json]
             [clojure.string :as str]
+
             [clojure.data.json :as json]))
 
 (defn clean [text]
@@ -25,4 +27,4 @@
   (spit output-filename (with-out-str (json/write-str content))))
 
 (defn output-md [content output-filename]
-  (spit output-filename (reduce str content)))
+  (spit output-filename (str row-normal-image " " (reduce str content) " " row-tiny-image)))
