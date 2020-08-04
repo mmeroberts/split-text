@@ -89,7 +89,7 @@
   (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
 
 (defn handle-verse-number [l]
-  (str/replace l #"^(\d+)(?:\s*)?(.*)" verse-number-format))
+  (str/replace l #"^(\d+[-\d]*)(?:\s*)?(.*)" verse-number-format))
 
 (defn transform-verse-numbers [md]
   (vec(transform [ALL :text] handle-verse-number md)))
@@ -142,9 +142,9 @@
                 lang (:lang l)
                 out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
                           (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
-                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n" row-tiny-image)
                                              (and (or (= style :boeng)(= style :bo)) (= lang :bo))
-                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             (str  "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n" row-tiny-image)
                                              :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
                           (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
                           (= type :verse) (let [itext (wrap-verse-in-span text lang)]

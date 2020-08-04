@@ -19,6 +19,9 @@
   [["-f" "--file FILENAME" "Filename without path or extension"]
    ["-d" "--directory DIRECTORY" "Directory that contains the working folders"]
    ["-t" "--title TITLE" "The Title of the document"]
+   ["-x" "--docx" "convert to docx" :default false]
+   ["-m" "--markdown"  "convert to markdown" :default false]
+
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
    ["-o" "--output OUTPUT"  "Output format - options html or pdf"
@@ -79,19 +82,24 @@
   (str  d "\\" s "\\" f e))
 
 (defn handle-document [style options]
+  (println (str options))
   (let [{:keys [output file title directory]} options
         ;filestub (first (str/split file #"\."))
+        suffix (cond (= style "bo") "uniglot"
+                     (= style "boeng") "diglot-interlinear"
+                     (= style "boeng-cols") "diglot-side-by-side")
+
         docfile (construct-filename directory  original  file ".doc")
         docxfile (construct-filename directory  intermediate  file ".docx")
         markdownfile (construct-filename directory  intermediate  file ".in.md")
         intermediatefilename (construct-filename directory  intermediate  file ".out.md")
-        outputfile (construct-filename directory  pre-published file (str "." output))
-        one (println "doc2docx.bat " docfile " " docxfile)
-        {:keys [exit out err] }(sh/sh "doc2docx.bat" docfile docxfile)
-        two (println "docx2md.bat " docxfile " " markdownfile)
-        {:keys [exit out err] }(sh/sh "docx2md.bat" docxfile markdownfile)]
+        outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))]
+        ;one (println "doc2docx.bat " docfile " " docxfile)
+        (if (:docx options) (println {:keys [:exit :out :err] })(sh/sh "doc2docx.bat" docfile docxfile))
+        ;two (println "docx2md.bat " docxfile " " markdownfile)
+        (if (:markdown options) (println {:keys [:exit :out :err]} (sh/sh "docx2md.bat" docxfile markdownfile)))
 
-    (if (not= exit 0) (println err)
+    (if (not= exit 0)
                       (do (case style
                             "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
                             "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
