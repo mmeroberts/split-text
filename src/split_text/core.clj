@@ -82,7 +82,7 @@
   (str  d "\\" s "\\" f e))
 
 (defn handle-document [style options]
-  (println (str options))
+  (tap> (str options))
   (let [{:keys [output file title directory]} options
         ;filestub (first (str/split file #"\."))
         suffix (cond (= style "bo") "uniglot"
@@ -100,12 +100,12 @@
         (if (:markdown options) (println {:keys [:exit :out :err]} (sh/sh "docx2md.bat" docxfile markdownfile)))
 
     (if (not= exit 0)
-                      (do (case style
-                            "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
-                            "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
-                            "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
-                          (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
-                          (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet)))))
+        (do (case style
+              "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
+              "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
+              "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
+            (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
+            (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet)))))
 
 
 

@@ -12,7 +12,11 @@
 
   :aliases {:deps
             {:extra-deps {org.clojure/tools.deps.alpha {:mvn/version "0.6.496"}}}
-            :test {:extra-paths ["test"]}}
+            :test {:extra-paths ["test"]}
+            :repl {:extra-deps {vlaaad/reveal {:mvn/version "1.1.163"}}:main-opts ["-m" "vlaaad.reveal" "repl"]}}
+
+
+
 
   :mvn/repos {
               "central" {:url "https://repo1.maven.org/maven2/"}

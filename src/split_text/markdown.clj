@@ -65,7 +65,8 @@
 
 (defn classify-type [mt]
   (for [s mt]
-    (cond (str/starts-with? (:text s) "###") (assoc s :type :h3 :text (subs (:text s) 3))
+    (cond (str/starts-with? (:text s) "####") (assoc s :type :h4 :text (subs (:text s) 5))
+          (str/starts-with? (:text s) "###") (assoc s :type :h3 :text (subs (:text s) 3))
           (str/starts-with? (:text s) "##") (assoc s :type :h2 :text (subs (:text s)  2))
           (str/starts-with? (:text s) "#") (assoc s :type :h1 :text (subs (:text s)  1))
           :else (assoc s :type :verse))))
@@ -82,11 +83,23 @@
 (defn transform-underlines [md]
   (vec(transform [ALL :text] replace_underlines md)))
 
+(defn transform-underline-style-line [l]
+  (str/replace l #"(\{.+?\})" split-text.config/name-highlight-style))
+
+(defn transform-underlines-style [md]
+  (vec(transform [ALL :text] transform-underline-style-line md)))
+
 (defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:\{\}])" bo-brackets))
+  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
 
 (defn surround-bo-brackets [md]
   (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
+
+(defn handle-dir-rtl [l]
+  (str/replace l #"\[ \]\s*\{dir=.rtl.\}" " "))
+
+(defn remove-dir-rtl [md]
+  (vec (transform [ALL #(= (:lang %) :bo) :text] handle-dir-rtl md)))
 
 (defn handle-verse-number [l]
   (str/replace l #"^(\d+[-\d]*)(?:\s*)?(.*)" verse-number-format))
@@ -97,12 +110,35 @@
 (defn handle-joined-lines [e]
   (let [l (:text e)]
     (if (= (:lang e) :bo)
-        (assoc e :text (str/replace l #"_" ""))
+        (assoc e :text (str/replace (str/replace l #"\u0F0D_" "&#xf0d;    ") #"_" ""))
         (assoc e :text (str/replace l #"_" " ")))))
 
 
 (defn transform-joined-lines [md]
   (vec(transform [ALL] handle-joined-lines md)))
+
+(defn handle-quotes [e]
+  (let [l (:text e)]
+    (if (= (:lang e) :bo)
+      (assoc e :text (str/replace (str/replace l "\"" "&quot;") "'" "&apos;"))
+      (assoc e :text l))))
+
+
+(defn transform-quotes [md]
+  (vec(transform [ALL] handle-quotes md)))
+
+(defn handle-bo-lines [e]
+  (let [l (:text e)]
+    ;(do ;(tap> l)
+        (if (= (:lang e) :bo)
+          (assoc e :text (str/replace l #"([\u0F00-\u0FDA]+ *[\u0F00-\u0FDA]*)*" "<span lang=\"bo\">$1</span>"))
+          ;(assoc e :text (str/replace l #"(([\u0F00-\u0FDA]+[ ]*)*)" "<span lang=\"bo\">$1</span>"))
+          (assoc e :text l))))
+
+
+(defn mark-bo-lang-lines [md]
+  (vec(transform [ALL] handle-bo-lines md)))
+
 
 (defn process-markdown [md]
   (-> md
@@ -113,9 +149,16 @@
     (classify-type)
     (index-lines)
     (transform-underlines)
+    (transform-quotes)
+    ;(mark-bo-lang-lines)
     (transform-verse-numbers)
     (transform-joined-lines)
-    (surround-bo-brackets)))
+    (remove-dir-rtl)
+    (surround-bo-brackets)
+      (transform-underlines-style)))
+
+
+
 
 
 (defn process-markdown-file [filename]
@@ -123,30 +166,44 @@
       (process-markdown)))
 
 (defn filter-markdown-for-bo [l]
-  (or (and (= (:lang l) :bo) (contains? #{ :verse :h2 :h3} (:type l)))  (= (:type l) :h1)))
+  (or (and (= (:lang l) :bo) (contains? #{ :verse :h2 :h3 :h4} (:type l)))  (= (:type l) :h1)))
 
 (defn filter-markdown-for-boeng [l]
-  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h2 :h3} (:type l)))  (= (:type l) :h1)))
+  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h2 :h3 :h4} (:type l)))  (= (:type l) :h1)))
 
 (defn wrap-verse-in-span [l lang]
   "Wrap a line that starts with a verse number in a span with class of lang"
-  (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
-        sol (subs l 0 end-of-vn-span)
-        span (subs l end-of-vn-span)]
-    (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n")))
+  (if (str/starts-with? l "<span>")
+    (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
+          sol (subs l 0 end-of-vn-span)
+          span (subs l end-of-vn-span)]
+      (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n"))
+    (str "<span class=\"v-" (name lang) "\">" l "</span>\n")))
+
+(defn wrap-quote-in-span [l lang]
+  "Wrap a line that starts with a verse number in a span with class of lang"
+  (if (str/starts-with? l "<span>")
+    (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
+          sol (subs l 0 end-of-vn-span)
+          span (subs l end-of-vn-span)]
+      (str sol "<span class=\"vq-" (name lang) "\">" span "</span>\n"))
+    (str "<span class=\"vq-" (name lang) "\">" l "</span>\n")))
 
 (defn output-markdown [style md]
         (for [l md]
           (let [text (:text l)
                 type (:type l)
                 lang (:lang l)
+                ;x (println "!" lang "!" type "!" text "!")
                 out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
                           (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
-                                             (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n" row-tiny-image)
+                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
                                              (and (or (= style :boeng)(= style :bo)) (= lang :bo))
-                                             (str  "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n" row-tiny-image)
+                                             (str  row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
                                              :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
                           (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
+                          (= type :h4) (let [itext (wrap-quote-in-span text lang)]
+                                         (str "<div class=\"q-" (name lang) "\">" itext "</div>\n"))
                           (= type :verse) (let [itext (wrap-verse-in-span text lang)]
                                             (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
             out)))
