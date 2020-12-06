@@ -6,6 +6,11 @@ body {
     /*overflow-wrap: break-word;*/
 }
 
+ol {
+    padding: 0;
+    margin-left: 1em;
+}
+
 @media only screen and (orientation: landscape) {
     body {
         margin-left: 10%;
@@ -36,7 +41,7 @@ body {
      font-size: xx-large;
      font-weight: normal;
      text-align: center;
-     margin-bottom: 0; /* was 2em */
+     /*margin-bottom: 0; !* was 2em *!*/
  }
  .h3-english {
      font-size: large;
@@ -56,10 +61,14 @@ span.vn {
     font-size: 18pt;
 }
 .nameHighlight {
-    color: blue;
+    color: darkblue;
 }
 .vq-bo {
     font-size: 18pt;
+    padding-left: 50px;
+}
+.vq-english {
+    font-size: 12pt;
     padding-left: 50px;
 }
 .v-english {
@@ -125,7 +134,7 @@ h3 {
 }
 p {
     font-size: 15pt;
-
+    margin-top:  1em;
 }
 span.underline {
     color: blue;
@@ -170,11 +179,25 @@ span.bo-brackets {
     /*border: 3px solid #00AF50;*/
     padding: 0px;
 }
+.q-bo {
+    margin: 0;
+}
+
+.q-english p {
+    margin: 0;
+}
 
 .q-bo p {
     margin: 0;
 }
 .verse .p-english {
+    width: 48%;
+    float: right;
+    /*border: 3px solid #1FAF50;*/
+    padding: 0px;
+}
+
+.verse .q-english {
     width: 48%;
     float: right;
     /*border: 3px solid #1FAF50;*/

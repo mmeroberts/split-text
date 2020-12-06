@@ -45,7 +45,7 @@
         "  eng        Print english text"
         "  back       Print back translation - will include english titles and headers"
         "  boeng      Print tibetan and english interleaved"
-        "  boeng-col  Print tibetan and english in columns"
+        "  boeng-cols  Print tibetan and english in columns"
         "  boback     Print tibetan and back translation interleaved"
         "  all        Print full document - all languages"
         ""
@@ -95,9 +95,9 @@
         intermediatefilename (construct-filename directory  intermediate  file ".out.md")
         outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))]
         ;one (println "doc2docx.bat " docfile " " docxfile)
-        (if (:docx options) (println {:keys [:exit :out :err] })(sh/sh "doc2docx.bat" docfile docxfile))
+        (if (:docx options) (sh/sh "doc2docx.bat" docfile docxfile))
         ;two (println "docx2md.bat " docxfile " " markdownfile)
-        (if (:markdown options) (println {:keys [:exit :out :err]} (sh/sh "docx2md.bat" docxfile markdownfile)))
+        (if (:markdown options) (sh/sh "docx2md.bat" docxfile markdownfile))
 
     (if (not= exit 0)
         (do (case style

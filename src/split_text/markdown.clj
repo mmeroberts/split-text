@@ -27,7 +27,7 @@
     (:strings new)))
 
 (defn split-verses [verstr]
-  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)\D+)" verstr)))
+  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)(\D+|[0-9]+,000)*)" verstr)));;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
 
 (defn handle-text [t]
   "looks for lines of text that are deemed as text - they are not headings or blanks"
@@ -84,13 +84,13 @@
   (vec(transform [ALL :text] replace_underlines md)))
 
 (defn transform-underline-style-line [l]
-  (str/replace l #"(\{.+?\})" split-text.config/name-highlight-style))
+  (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
 
 (defn transform-underlines-style [md]
   (vec(transform [ALL :text] transform-underline-style-line md)))
 
 (defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
+  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
 
 (defn surround-bo-brackets [md]
   (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
@@ -197,7 +197,7 @@
                 ;x (println "!" lang "!" type "!" text "!")
                 out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
                           (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
-                                             (str row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             (str row-tiny-image "<div><h2 class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
                                              (and (or (= style :boeng)(= style :bo)) (= lang :bo))
                                              (str  row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
                                              :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
