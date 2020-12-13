@@ -54,8 +54,9 @@ ol {
 }
 
 
-span.vn {
-    font-size: 12pt;
+.vn {
+    vertical-align: super;
+    font-size: 8pt;
 }
 .v-bo {
     font-size: 18pt;

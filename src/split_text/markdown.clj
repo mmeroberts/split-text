@@ -27,7 +27,7 @@
     (:strings new)))
 
 (defn split-verses [verstr]
-  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)(\D+|[0-9]+,000)*)" verstr)));;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
+  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+)*)" verstr)));;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
 
 (defn handle-text [t]
   "looks for lines of text that are deemed as text - they are not headings or blanks"
@@ -90,7 +90,7 @@
   (vec(transform [ALL :text] transform-underline-style-line md)))
 
 (defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
+  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
 
 (defn surround-bo-brackets [md]
   (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
