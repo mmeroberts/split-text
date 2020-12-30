@@ -1,0 +1,1 @@
+C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s %1 --metadata title=%3  -H %4  -H .\resources\scripts\menu.js -o %2

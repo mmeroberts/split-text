@@ -21,8 +21,11 @@
 (def stylesheet ".\\resources\\css\\main.css")
 (def name-highlight-style  "<span class=\"nameHighlight\">$2</span>")
 (def name-highlight  "{$2}")
+(def name-highlight-h2  "$2")
 ;(def name-highlight  "{$2}")
 (def verse-number-format "<span class=\"vn\">$1</span> $2")
+(def sentence-space-format "$1$2&emsp;")
+(def sentence-ka-she-format "$1&emsp;$2")
 (def bo-brackets "<span class=\"bo-brackets\">$1</span>")
 
 (def original "pre-processing")

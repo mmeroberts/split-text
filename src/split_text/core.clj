@@ -69,7 +69,7 @@
       {:exit-message (error-msg errors)}
       ;; custom validation on arguments
       (and (= 1 (count arguments))
-           (#{"bo" "eng" "back" "boeng" "boeng-cols" "boback" "all"} (first arguments)))
+           (#{"bo" "bo-nav" "eng" "back" "boeng" "boeng-nav" "boeng-cols" "boback" "all"} (first arguments)))
       {:style (first arguments) :options options}
       :else ; failed custom validation => exit with usage summary
       {:exit-message (usage summary)})))
@@ -85,8 +85,10 @@
   (tap> (str options))
   (let [{:keys [output file title directory]} options
         ;filestub (first (str/split file #"\."))
-        suffix (cond (= style "bo") "uniglot"
+        suffix (cond (= style "bo")  "uniglot"
+                     (= style "bo-nav")  "uniglot-nav"
                      (= style "boeng") "diglot-interlinear"
+                     (= style "boeng-nav") "diglot-interlinear-nav"
                      (= style "boeng-cols") "diglot-side-by-side")
 
         docfile (construct-filename directory  original  file ".doc")
@@ -100,12 +102,15 @@
         (if (:markdown options) (sh/sh "docx2md.bat" docxfile markdownfile))
 
     (if (not= exit 0)
+      (let [md (process-markdown-file markdownfile)]
         (do (case style
-              "bo" (output-md (output-bo-markdown (process-markdown-file markdownfile)) intermediatefilename)
-              "boeng" (output-md (output-boeng-markdown (process-markdown-file markdownfile)) intermediatefilename)
-              "boeng-cols" (output-md (output-boeng-interlinear (process-markdown-file markdownfile)) intermediatefilename))
+              "bo" (output-md (output-bo-markdown md) intermediatefilename)
+              "bo-nav" (output-md-with-navigation (output-bo-markdown md) md intermediatefilename)
+              "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
+              "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md intermediatefilename)
+              "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
             (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
-            (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet)))))
+            (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet))))))
 
 
 
@@ -119,10 +124,14 @@
 
 (comment
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
-  (-main "-f" "2020-Revelation-final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
+  (-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "bo")
   (-main "-f" "2020-Revelation-final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "boeng")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "boeng")
-  
+  (def dir "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
+  (def filein "2020-Revelation-Final")
+  (def mdf (construct-filename dir  intermediate  filein ".in.md"))
+  (def mdcin (read-markdown mdf))
+  (def mdcout (process-markdown mdcin))
   )
 ; (-main "-f" "James.doc" "boeng-cols")

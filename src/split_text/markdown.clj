@@ -65,7 +65,8 @@
 
 (defn classify-type [mt]
   (for [s mt]
-    (cond (str/starts-with? (:text s) "####") (assoc s :type :h4 :text (subs (:text s) 5))
+    (cond (str/starts-with? (:text s) "#####") (assoc s :type :h5 :text (subs (:text s) 5))
+          (str/starts-with? (:text s) "####") (assoc s :type :h4 :text (subs (:text s) 5))
           (str/starts-with? (:text s) "###") (assoc s :type :h3 :text (subs (:text s) 3))
           (str/starts-with? (:text s) "##") (assoc s :type :h2 :text (subs (:text s)  2))
           (str/starts-with? (:text s) "#") (assoc s :type :h1 :text (subs (:text s)  1))
@@ -79,15 +80,24 @@
         l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight)
         l3 (str/replace (str/replace l2 #"\@" "\\[") #"\#" "\\]")]
     l3))
-
 (defn transform-underlines [md]
-  (vec(transform [ALL :text] replace_underlines md)))
+  (vec(transform [ALL #(or (= (:type %) :verse) (= (:type %) :h4)) :text] replace_underlines md)))
+
+(defn remove_underlines [l]
+  (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
+        l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight-h2)
+        l3 (str/replace (str/replace l2 #"\@" "\\[") #"\#" "\\]")]
+    l3))
+
+(defn transform-heading-underlines [md]
+  (vec(transform [ALL #(or (= (:type %) :h3) (= (:type %) :h5)) :text] remove_underlines md)))
+
 
 (defn transform-underline-style-line [l]
   (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
 
 (defn transform-underlines-style [md]
-  (vec(transform [ALL :text] transform-underline-style-line md)))
+  (vec(transform [ALL   :text] transform-underline-style-line md)))
 
 (defn handle-bo-brackets [l]
   (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
@@ -106,6 +116,22 @@
 
 (defn transform-verse-numbers [md]
   (vec(transform [ALL :text] handle-verse-number md)))
+
+(defn handle-sentence-spaces [l]
+  (let [l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
+        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)]
+    l2))
+
+(defn transform-sentence-space [md]
+  (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
+
+(defn handle-spaces-after-bo-brackets [l]
+  (let [l1 (str/replace l #"(?:\s+)?(\(|\[)" "$1")
+        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1\u200A")]
+    l2))
+
+(defn transform-spaces-after-bo-brackets [md]
+  (vec(transform [ALL #(= (:lang %) :bo) :text] handle-spaces-after-bo-brackets md)))
 
 (defn handle-joined-lines [e]
   (let [l (:text e)]
@@ -127,6 +153,8 @@
 (defn transform-quotes [md]
   (vec(transform [ALL] handle-quotes md)))
 
+
+
 (defn handle-bo-lines [e]
   (let [l (:text e)]
     ;(do ;(tap> l)
@@ -140,6 +168,9 @@
   (vec(transform [ALL] handle-bo-lines md)))
 
 
+
+
+
 (defn process-markdown [md]
   (-> md
     (clean-markdown)
@@ -149,13 +180,16 @@
     (classify-type)
     (index-lines)
     (transform-underlines)
+    (transform-heading-underlines)
     (transform-quotes)
     ;(mark-bo-lang-lines)
     (transform-verse-numbers)
     (transform-joined-lines)
     (remove-dir-rtl)
+    (transform-sentence-space)
+    (transform-spaces-after-bo-brackets)
     (surround-bo-brackets)
-      (transform-underlines-style)))
+    (transform-underlines-style)))
 
 
 
@@ -165,11 +199,14 @@
   (-> (read-markdown filename)
       (process-markdown)))
 
+
+
 (defn filter-markdown-for-bo [l]
-  (or (and (= (:lang l) :bo) (contains? #{ :verse :h2 :h3 :h4} (:type l)))  (= (:type l) :h1)))
+  (or (and (= (:lang l) :bo) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l)))
+      (and    (= (:lang l) :english) (contains? #{ :h2} (:type l)))))
 
 (defn filter-markdown-for-boeng [l]
-  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h2 :h3 :h4} (:type l)))  (= (:type l) :h1)))
+  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l)))  (= (:type l) :h1)))
 
 (defn wrap-verse-in-span [l lang]
   "Wrap a line that starts with a verse number in a span with class of lang"
@@ -197,11 +234,12 @@
                 ;x (println "!" lang "!" type "!" text "!")
                 out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
                           (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
-                                             (str row-tiny-image "<div><h2 class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
+                                             (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
                                              (and (or (= style :boeng)(= style :bo)) (= lang :bo))
-                                             (str  row-tiny-image "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+                                             (str  row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
                                              :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
                           (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
+                          (= type :h5) (str "<h5 class=\"h5-" (name lang) "\">" text "</h5>\n")
                           (= type :h4) (let [itext (wrap-quote-in-span text lang)]
                                          (str "<div class=\"q-" (name lang) "\">" itext "</div>\n"))
                           (= type :verse) (let [itext (wrap-verse-in-span text lang)]
@@ -230,6 +268,8 @@
 
 (defn output-boeng-interlinear [md]
   (output-div-pairs (filter filter-markdown-for-boeng md)))
+
+
 ;; post processing
 ;pandoc -s .\ProcessJames.md -c .\resources\css\main.css --metadata title="James" -o ProcessJamesBo.html
 
