@@ -199,11 +199,12 @@
   (-> (read-markdown filename)
       (process-markdown)))
 
-
+(defn filter-markdown-for-eng [l]
+  (and (= (:lang l) :english) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l))))
 
 (defn filter-markdown-for-bo [l]
   (or (and (= (:lang l) :bo) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l)))
-      (and    (= (:lang l) :english) (contains? #{ :h2} (:type l)))))
+      (and    (= (:lang l) :english) (contains? #{ :h2 :h1} (:type l)))))
 
 (defn filter-markdown-for-boeng [l]
   (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l)))  (= (:type l) :h1)))
@@ -262,6 +263,9 @@
 
 (defn output-bo-markdown [md]
   (output-markdown :bo (filter filter-markdown-for-bo md)))
+
+(defn output-eng-markdown [md]
+  (output-markdown :eng (filter filter-markdown-for-eng md)))
 
 (defn output-boeng-markdown [md]
   (output-markdown :boeng (filter filter-markdown-for-boeng md)))

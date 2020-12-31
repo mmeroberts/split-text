@@ -86,6 +86,7 @@
   (let [{:keys [output file title directory]} options
         ;filestub (first (str/split file #"\."))
         suffix (cond (= style "bo")  "uniglot"
+                     (= style "eng")  "english"
                      (= style "bo-nav")  "uniglot-nav"
                      (= style "boeng") "diglot-interlinear"
                      (= style "boeng-nav") "diglot-interlinear-nav"
@@ -105,9 +106,10 @@
       (let [md (process-markdown-file markdownfile)]
         (do (case style
               "bo" (output-md (output-bo-markdown md) intermediatefilename)
-              "bo-nav" (output-md-with-navigation (output-bo-markdown md) md intermediatefilename)
+              "eng" (output-md (output-eng-markdown md) intermediatefilename)
+              "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
               "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
-              "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md intermediatefilename)
+              "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
               "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
             (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
             (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet))))))
