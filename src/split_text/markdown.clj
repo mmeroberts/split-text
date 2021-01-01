@@ -93,17 +93,8 @@
   (vec(transform [ALL #(or (= (:type %) :h3) (= (:type %) :h5)) :text] remove_underlines md)))
 
 
-(defn transform-underline-style-line [l]
-  (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
 
-(defn transform-underlines-style [md]
-  (vec(transform [ALL   :text] transform-underline-style-line md)))
 
-(defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
-
-(defn surround-bo-brackets [md]
-  (vec (transform [ALL #(= (:lang %) :bo) :text] handle-bo-brackets md)))
 
 (defn handle-dir-rtl [l]
   (str/replace l #"\[ \]\s*\{dir=.rtl.\}" " "))
@@ -112,10 +103,35 @@
   (vec (transform [ALL #(= (:lang %) :bo) :text] handle-dir-rtl md)))
 
 (defn handle-verse-number [l]
-  (str/replace l #"^(\d+[-\d]*)(?:\s*)?(.*)" verse-number-format))
+  (let [text (:text l)
+        matcher (re-matcher #"^(\d+[-\d]*)(?:\s*)?(.*)" text)
+        matches (re-find matcher)
+        verse-number (second matches)
+        verse-text (last matches)
+        new-l (assoc l :text verse-text :verse-number verse-number)]
+    new-l))
+
 
 (defn transform-verse-numbers [md]
-  (vec(transform [ALL :text] handle-verse-number md)))
+  (vec(transform [ALL #(= (:type %) :verse)  ] handle-verse-number md)))
+
+
+(defn handle-h4-verse-number [l]
+  (let [text (:text l)
+        matcher (re-matcher #"^(\d+[-\d]*)(?:\s*)?(.*)" text)
+        matches (re-find matcher)]
+    (if (some? matches) ;; verse number exists so process
+      (let [verse-number (second matches)
+            verse-text (last matches)
+            new-l (assoc l :text verse-text :verse-number verse-number)]
+        new-l)
+      l))) ;; else just return the original
+
+
+
+
+(defn transform-h4-verse-number [md]
+  (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
   (let [l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
@@ -158,10 +174,10 @@
 (defn handle-bo-lines [e]
   (let [l (:text e)]
     ;(do ;(tap> l)
-        (if (= (:lang e) :bo)
-          (assoc e :text (str/replace l #"([\u0F00-\u0FDA]+ *[\u0F00-\u0FDA]*)*" "<span lang=\"bo\">$1</span>"))
-          ;(assoc e :text (str/replace l #"(([\u0F00-\u0FDA]+[ ]*)*)" "<span lang=\"bo\">$1</span>"))
-          (assoc e :text l))))
+    (if (= (:lang e) :bo)
+      (assoc e :text (str/replace l #"([\u0F00-\u0FDA]+ *[\u0F00-\u0FDA]*)*" "<span lang=\"bo\">$1</span>"))
+      ;(assoc e :text (str/replace l #"(([\u0F00-\u0FDA]+[ ]*)*)" "<span lang=\"bo\">$1</span>"))
+      (assoc e :text l))))
 
 
 (defn mark-bo-lang-lines [md]
@@ -173,23 +189,23 @@
 
 (defn process-markdown [md]
   (-> md
-    (clean-markdown)
-    (flatten)
-    (merge-lines)
-    (classify-language)
-    (classify-type)
-    (index-lines)
-    (transform-underlines)
-    (transform-heading-underlines)
-    (transform-quotes)
-    ;(mark-bo-lang-lines)
-    (transform-verse-numbers)
-    (transform-joined-lines)
-    (remove-dir-rtl)
-    (transform-sentence-space)
-    (transform-spaces-after-bo-brackets)
-    (surround-bo-brackets)
-    (transform-underlines-style)))
+      (clean-markdown)
+      (flatten)
+      (merge-lines)
+      (classify-language)
+      (classify-type)
+      (index-lines)
+      (transform-underlines)
+      (transform-heading-underlines)
+      (transform-quotes)
+      ;(mark-bo-lang-lines)
+      (transform-joined-lines)
+      (transform-verse-numbers)
+      (transform-h4-verse-number)
+      (remove-dir-rtl)
+      (transform-sentence-space)
+      (transform-spaces-after-bo-brackets)))
+
 
 
 
@@ -227,24 +243,62 @@
       (str sol "<span class=\"vq-" (name lang) "\">" span "</span>\n"))
     (str "<span class=\"vq-" (name lang) "\">" l "</span>\n")))
 
+(defn handle-bo-brackets [l]
+  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
+
+(defn transform-underline-style-line [l]
+  (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
+
+(defn process-text [lang text]
+  (if (= lang :bo)
+    (->  text
+         (handle-bo-brackets)
+         (transform-underline-style-line))
+    text))
+
+(defn h1 [_ l]
+  (let [lang (:lang l)
+        text (process-text lang (:text l))]
+    (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")))
+
+(defn h2 [style l]
+  (let [lang (:lang l)
+        text (:text l)]
+    (cond (and (= style :boeng-cols) (= lang :english))
+          (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
+          (and (or (= style :boeng)(= style :bo)) (= lang :bo))
+          (str  row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
+          :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))))
+
+(defn h3 [_ l]
+  (let [lang (:lang l)
+        text (process-text lang (:text l))]
+    (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")))
+
+(defn h5 [_ l]
+  (let [lang (:lang l)
+        text (process-text lang (:text l))]
+    (str "<h5 class=\"h5-" (name lang) "\">" text "</h5>\n")))
+
+(defn h4 [_ l]
+  (let [lang (:lang l)
+        text (:text l)
+        vn (str "<span class=\"vn\">" (:verse-number l) "</span>")
+        itext (wrap-quote-in-span (process-text lang (str vn " " text)) lang)]
+    (str "<div class=\"q-" (name lang) "\">" itext "</div>\n")))
+
+(defn verse [_ l]
+  (let [lang (:lang l)
+        text (:text l)
+        vn (str "<span class=\"vn\">" (:verse-number l) "</span>")
+        itext (wrap-verse-in-span (process-text lang (str vn " " text)) lang)]
+    (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))
+
 (defn output-markdown [style md]
         (for [l md]
-          (let [text (:text l)
-                type (:type l)
-                lang (:lang l)
+          (let [ftype (resolve (symbol (:type l)))
                 ;x (println "!" lang "!" type "!" text "!")
-                out (cond (= type :h1) (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")
-                          (= type :h2) (cond (and (= style :boeng-cols) (= lang :english))
-                                             (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
-                                             (and (or (= style :boeng)(= style :bo)) (= lang :bo))
-                                             (str  row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
-                                             :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))
-                          (= type :h3) (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")
-                          (= type :h5) (str "<h5 class=\"h5-" (name lang) "\">" text "</h5>\n")
-                          (= type :h4) (let [itext (wrap-quote-in-span text lang)]
-                                         (str "<div class=\"q-" (name lang) "\">" itext "</div>\n"))
-                          (= type :verse) (let [itext (wrap-verse-in-span text lang)]
-                                            (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))]
+                out (ftype style l)]
             out)))
 
 

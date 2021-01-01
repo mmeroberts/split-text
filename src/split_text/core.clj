@@ -134,6 +134,7 @@
   (def filein "2020-Revelation-Final")
   (def mdf (construct-filename dir  intermediate  filein ".in.md"))
   (def mdcin (read-markdown mdf))
-  (def mdcout (process-markdown mdcin))
+  (def mdcproc (process-markdown mdcin))
+  (def mdcout (output-markdown "bo" mdcproc))
   )
 ; (-main "-f" "James.doc" "boeng-cols")
