@@ -136,5 +136,13 @@
   (def mdcin (read-markdown mdf))
   (def mdcproc (process-markdown mdcin))
   (def mdcout (output-markdown "bo" mdcproc))
+
+
+  (loop [  [one two & remaining] m  o []]
+    (println one two remaining o)
+    (cond (and (= (:t one) :a) (= (:t two) :b)) (recur ((comp vec flatten conj) [] [] (assoc one :t1 [(:t one) (:t two)]) (flatten remaining)) o)
+          (and (nil? one) (nil? two)) o
+          (nil? two) (let [n (assoc one :t1 [(:t one)])] (recur two (conj o n)))
+          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n)))))
   )
 ; (-main "-f" "James.doc" "boeng-cols")

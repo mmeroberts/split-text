@@ -2,6 +2,7 @@
   (:require
     [split-text.config :refer :all]
     [clojure.string :as str]
+    [split-text.io :refer :all]
     [com.rpl.specter :refer :all]))
 
 
@@ -75,6 +76,20 @@
 (defn index-lines [mt]
   (map-indexed (fn [idx itm] (assoc itm :index idx)) mt))
 
+(defn merge-quotations [mt]
+  (loop [  [one two & remaining] mt  o []]
+    (cond (and (= (:type one) :verse) (= (:type two) :h4))
+          (recur (let [ newone (if (contains? one :fulltext)
+                                 (assoc one :fulltext [(:fulltext one) (str "> " (:text two))])
+                                 (assoc one :fulltext [ (:text one) (str "> " (:text two))]))]
+                   ((comp vec flatten conj) [] newone (flatten remaining))) o)
+          (and (nil? one) (nil? two)) o
+          (nil? two) (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext [(:text one)]) one)]
+                       (recur two (conj o (assoc n :fulltext ((comp vec flatten) (:fulltext n))))))
+          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext [(:text one)]) one)]
+                  (recur ((comp vec flatten conj) [] two remaining)
+                         (conj  o (assoc n :fulltext ((comp vec flatten) (:fulltext n)))))))))
+
 (defn replace_underlines [l]
   (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
         l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight)
@@ -127,9 +142,6 @@
         new-l)
       l))) ;; else just return the original
 
-
-
-
 (defn transform-h4-verse-number [md]
   (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
@@ -143,7 +155,7 @@
 
 (defn handle-spaces-after-bo-brackets [l]
   (let [l1 (str/replace l #"(?:\s+)?(\(|\[)" "$1")
-        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1\u200A")]
+        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1&#x200A")]
     l2))
 
 (defn transform-spaces-after-bo-brackets [md]
@@ -183,6 +195,30 @@
 (defn mark-bo-lang-lines [md]
   (vec(transform [ALL] handle-bo-lines md)))
 
+(defn get-chapter-entries [md]
+  (filter filter-chapter-eng-headings md))
+
+(defn get-chapters [md]
+ ( into {} (let [x (partition 2 (select [ALL (multi-path :index :text)] (get-chapter-entries md)))]
+            (for [[k v] x]
+              (assoc {} k (str/trim v))))))
+
+(defn get-indexes [chapters]
+  (sort(keys chapters)))
+
+
+
+(defn get-chapter-for-entry [chapters indexes entry]
+  (let [
+        chapter-index (last (filter #(>= (inc (:index entry)) %) indexes))]
+    (get chapters (if (nil? chapter-index) (first indexes) chapter-index))))
+
+
+
+(defn allocate-chapters [md]
+  (let [chapters (get-chapters md)
+        indexes (get-indexes chapters)]
+    (map #(assoc % :chapter (get-chapter-for-entry chapters indexes %)) md)))
 
 
 
@@ -201,10 +237,12 @@
       ;(mark-bo-lang-lines)
       (transform-joined-lines)
       (transform-verse-numbers)
+      (allocate-chapters)
       (transform-h4-verse-number)
       (remove-dir-rtl)
       (transform-sentence-space)
-      (transform-spaces-after-bo-brackets)))
+      (transform-spaces-after-bo-brackets)
+      (merge-quotations)))
 
 
 
