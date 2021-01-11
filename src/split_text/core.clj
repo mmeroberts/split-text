@@ -5,7 +5,7 @@
     ;[split-text.inwards :refer :all]
     ;[split-text.outwards :refer :all]
     [split-text.markdown :refer :all]
-    ;[crux.api :as crux]
+    [split-text.db :refer :all]
     [clojure.string :as str]
     [com.rpl.specter :refer :all]
     [hiccup2.core :as h]

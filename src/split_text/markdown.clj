@@ -78,17 +78,18 @@
 
 (defn merge-quotations [mt]
   (loop [  [one two & remaining] mt  o []]
+    ;(println one o)
     (cond (and (= (:type one) :verse) (= (:type two) :h4))
           (recur (let [ newone (if (contains? one :fulltext)
-                                 (assoc one :fulltext [(:fulltext one) (str "> " (:text two))])
-                                 (assoc one :fulltext [ (:text one) (str "> " (:text two))]))]
+                                 (assoc one :fulltext (assoc (:fulltext one) (:index two) (str "> " (:text two))))
+                                 (assoc one :fulltext  (assoc {} (:index one) (:text one) (:index two) (str "> " (:text two)))))]
                    ((comp vec flatten conj) [] newone (flatten remaining))) o)
           (and (nil? one) (nil? two)) o
-          (nil? two) (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext [(:text one)]) one)]
-                       (recur two (conj o (assoc n :fulltext ((comp vec flatten) (:fulltext n))))))
-          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext [(:text one)]) one)]
+          (nil? two) (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
+                       (recur two (conj o (assoc n :fulltext  (:fulltext n)))))
+          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
                   (recur ((comp vec flatten conj) [] two remaining)
-                         (conj  o (assoc n :fulltext ((comp vec flatten) (:fulltext n)))))))))
+                         (conj  o (assoc n :fulltext (:fulltext n))))))))
 
 (defn replace_underlines [l]
   (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
