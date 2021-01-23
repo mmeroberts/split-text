@@ -1,116 +1,74 @@
 (ns split-text.db
-  (:require [split-text.config :refer :all]
-            [datahike.api :as d]))
+  (:require    [clojure.string :as str]
+               [clojure.java.io :as io]
+               [crux.api :as crux]))
 
-(def cfg {:store {:store {:backend :pg :host "localhost" :port 5432 :username "postgres" :password "postgres" :dbname "pg_example"}};{:backend :file :path db}           ;string
-          :schema-flexibility :write})
-(d/delete-database cfg)
 
-(d/create-database cfg)
 
-(def conn (d/connect cfg))
 
-(d/transact conn [{:db/ident :book
-                   :db/valueType :db.type/string
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :lang
-                   :db/valueType :db.type/keyword
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :type
-                   :db/valueType :db.type/keyword
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :chapter
-                   :db/valueType :db.type/string
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :verse-number
-                   :db/valueType :db.type/string
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :index
-                   :db/valueType :db.type/number
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :lines
-                   :db/valueType   :db.type/ref
-                   :db/cardinality :db.cardinality/many}
-                  {:db/ident :text/line-no
-                   :db/valueType :db.type/number
-                   :db/cardinality :db.cardinality/one}
-                  {:db/ident :text/line
-                   :db/valueType :db.type/string
-                   :db/cardinality :db.cardinality/one}])
+(defn start-http-client [port]
+ (crux/new-api-client (str "http://localhost:" port)))
 
-(defn add_entries [conn md book]
-  (for [e md]
-    (let [entry_id (d/tempid -1)
-          initial-entry (select-keys e [:lang :type :index :verse-number :chapter])
-          line-ids (vec (for [i (range (count (:fulltext e)))] (d/tempid -1)))
-          linesvec (vec (:fulltext e))
-          lines (into [] (for [i (range (count (:fulltext e)))]
-                  (let [id (nth line-ids i)
-                        line (nth linesvec i)
-                        lineno (first line)
-                        text (last line)]
-                    (assoc {} :db/id id :text/line-no lineno :text/line text))))
-          entry (conj  {:db/id entry_id :book book :lines line-ids} initial-entry )
-          transaction (conj lines entry)]
-      (d/transact conn transaction)
-       )))
+(def conn (start-http-client 3000))
+
+
+;(defn add_entries [conn md book source]
+;  (for [e md]
+;    (let [initial-entry (select-keys e [:lang :type :index :verse-number :chapter :next-verse])
+;          line-ids (vec (for [i (range (count (:fulltext e)))] (d/tempid -1)))
+;          linesvec (vec (:fulltext e))
+;          y (println line-ids "," linesvec)
+;          lines (into [] (for [i (range (count (:fulltext e)))]
+;                          (let [id (nth line-ids i)
+;                                line (nth linesvec i)
+;                                lineno (first line)
+;                                text (last line)]
+;                            (assoc {} :db/id id :text/line-no lineno :text/line text))))
+;          entry (conj  {:db/id entry_id :book book :source source :lines line-ids} initial-entry)
+;          transaction (conj lines entry)]
+;      (d/transact conn transaction))))
+
+
+
+(defn make-entry [source book  l]
+  (let [index (:index l)
+        id (keyword "web" (str book "_" index))
+        chapter (:chapter l)
+        verse-number (:verse-number l)
+        linesvec (vec (:fulltext l))
+        lines (into [] (for [i (range (count (:fulltext l)))]
+                         (let [line (nth linesvec i)
+                               lineno (first line)
+                               text (last line)]
+                           (assoc {} :text/line-no lineno :text/line text))))]
+    (assoc {} :crux.db/id id
+           :index index :source source :lang :english
+           :book book :chapter chapter :verse-number verse-number
+           :lines  lines)))
+
+(defn add_entries [conn source book md]
+  (let [firstpass (map #(make-entry source book %) md)
+        secondpass (map #(conj [] :crux.tx/put %) firstpass)]
+     (crux/submit-tx conn (vec secondpass))))
+
+
 
 (comment
-  (d/transact conn [{
-                     :lang         :english,
-                     :type         :verse,
-                     :index        23,
-                     :verse-number "7",
-                     :chapter      "1",
-                     :fulltext     ["Look! He (Jesus) will come on the clouds! Not only will everyone see him but those who pierced him [with a spear] will also see him. All the peoples of the earth will mourn loudly because of him. His coming will surely happen! Amen. (So be it). "]}])
-
-  (def t23 {:text         "&quot;དེར་ག་རེ་ཡོད་པ་ཚང་མའི་བྱུང་རྐྱེན་དེ་ང་ཡིན་པ་དང་&#xf0d;&emsp;ཚང་མ་མཐའ་ཅན་བྱེད་མཁན་དེ་ང་ཡིན་ཟེར་ནས་ཀུན་དབང་གཙོ་བོ་དཀོན་མཆོག་གིས་གསུང་གི་ཡོད་རེད།&emsp;ང་ལ་དབང་ཆ་ཆ་ཚང་ཡོད&#xf0d;&emsp;ང་གསོན་པོ་ཡིན་པ་དང་།&emsp;ང་ག་དུས་ཡིན་ནས་གསོན་པོ་ཡིན།&emsp;ང་ཡོང་གི་ཡིན།&quot; ",
-            :lang         :bo,
-            :type         :verse,
-            :index        24,
-            :verse-number "8",
-            :chapter      "1",
-            :fulltext     ["&quot;དེར་ག་རེ་ཡོད་པ་ཚང་མའི་བྱུང་རྐྱེན་དེ་ང་ཡིན་པ་དང་&#xf0d;&emsp;ཚང་མ་མཐའ་ཅན་བྱེད་མཁན་དེ་ང་ཡིན་ཟེར་ནས་ཀུན་དབང་གཙོ་བོ་དཀོན་མཆོག་གིས་གསུང་གི་ཡོད་རེད།&emsp;ང་ལ་དབང་ཆ་ཆ་ཚང་ཡོད&#xf0d;&emsp;ང་གསོན་པོ་ཡིན་པ་དང་།&emsp;ང་ག་དུས་ཡིན་ནས་གསོན་པོ་ཡིན།&emsp;ང་ཡོང་གི་ཡིན།&quot; "]})
-  (add_entries conn mdcproc "Revelation")
-
-  (d/transact conn [(select-keys t23 [:lang :type :index :verse-number :chapter :fulltext])])
-  (sort (d/q '[:find ?e ?i ?b ?c ?v ?f ?i
-               :in $  ?l
-               :where
-               [?e :book ?b]
-               [?e :chapter ?c]
-               [?e :index ?i]
-               [?e :verse-number ?v]
-               [?e :fulltext ?f]
-               [?e :lang ?l]]
-             @conn  :english))
-  (sort (d/q '[:find ?i ?e  ?b ?c ?v  ?i ?ls ?t
-               :in $  ?c ?v ?l
-               :where
-               [?e :book ?b]
-               [?e :chapter ?c]
-               [?e :index ?i]
-               [?e :verse-number ?v]
-               [?e :lang ?l]
-               [?e :lines ?ls]
-               [?ls :text/line ?t]]
-             @conn "5" "9" :bo))
-
-        (d/q '[:find ?e  ?ls
-               :in $  ?c ?v ?l
-               :where
-               [?e :book ?b]
-               [?e :chapter ?c]
-               [?e :verse-number ?v]
-               [?e :lang ?l]
-               [?e :lines ?ls]]
-             @conn "5" "9" :bo)
-
-  (sort(d/q '[:find ?ls ?ln ?t
-         :where
-         [?ls :text/line-no ?ln]
-         [?ls :text/line ?t]]
-       @conn )))
+  (def entry [:crux.tx/put
+              {:crux.db/id :web/Revelation_0,
+               :index 0,
+               :source "Himlit",
+               :lang :english,
+               :book "Revelation",
+               :chapter "1",
+               :verse-number nil,
+               :lines [#:text{:line-no 0, :line " མངོན་པ།"}]}])
+  (crux/submit-tx conn (conj [] entry))
+  (crux/q
+    (crux/db conn)
+    '{:find [n]
+      :where [[p1 :chapter n]]})
+  ,)
 
 
 

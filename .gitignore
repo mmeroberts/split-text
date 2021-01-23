@@ -129,3 +129,6 @@ workspace.xml
 /.idea
 /texts
 /.cpcache
+
+/data
+/.idea/workspace.xml

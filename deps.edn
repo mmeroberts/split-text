@@ -8,7 +8,7 @@
          clj-http {:mvn/version "3.10.1"}
          hiccup {:mvn/version "2.0.0-alpha2"}
          org.clojure/tools.cli {:mvn/version "1.0.194"}
-         io.replikativ/datahike {:mvn/version "0.3.2"}}
+         juxt/crux-http-client {:mvn/version "20.12-1.13.0-beta"}}
 
 
   :aliases {:deps

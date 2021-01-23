@@ -196,6 +196,35 @@
 (defn mark-bo-lang-lines [md]
   (vec(transform [ALL] handle-bo-lines md)))
 
+(defn filter-verses [l]
+  ;(or
+  (and (= (:lang l) :bo) (contains? #{ :verse } (:type l))))  ;(= (:type l) :h1)))
+
+(defn get-verses [md]
+  (filter filter-verses md))
+
+
+(defn get-verse-index [md]
+  ( into {} (let [x (partition 3 (select [ALL (multi-path :index :chapter :verse-number)] (get-verses md)))]
+              (for [[k c v] x]
+                (assoc {} k [c (str/trim v)])))))
+
+(defn get-verse-for-h3-entry [indexes entry]
+  (let [verse (first (filter #(< (:index entry) (key %)) indexes))]
+    (last (last verse))))
+
+(defn set-next-verse [indexes e]
+  (assoc e :next-verse (get-verse-for-h3-entry indexes e)))
+
+
+
+(defn allocate-h3-next-verse [md]
+  (let [indexes (sort (get-verse-index md))
+        set-h3-next-verse (partial set-next-verse indexes)]
+    (transform  [ALL #(= (:type %) :h3)] set-h3-next-verse md)))
+
+
+
 (defn get-chapter-entries [md]
   (filter filter-chapter-eng-headings md))
 
@@ -207,11 +236,8 @@
 (defn get-indexes [chapters]
   (sort(keys chapters)))
 
-
-
 (defn get-chapter-for-entry [chapters indexes entry]
-  (let [
-        chapter-index (last (filter #(>= (inc (:index entry)) %) indexes))]
+  (let [chapter-index (last (filter #(>= (inc (:index entry)) %) indexes))]
     (get chapters (if (nil? chapter-index) (first indexes) chapter-index))))
 
 
@@ -239,6 +265,7 @@
       (transform-joined-lines)
       (transform-verse-numbers)
       (allocate-chapters)
+      (allocate-h3-next-verse)
       (transform-h4-verse-number)
       (remove-dir-rtl)
       (transform-sentence-space)

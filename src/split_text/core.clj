@@ -1,5 +1,5 @@
 (ns split-text.core
-  (:require [split-text.config :refer :all]
+  (:require [split-text.config :refer [directory original intermediate pre-published stylesheet]]
     [split-text.io :refer :all]
     ;[split-text.meta :refer :all]
     ;[split-text.inwards :refer :all]
@@ -10,7 +10,8 @@
     [com.rpl.specter :refer :all]
     [hiccup2.core :as h]
     [clojure.tools.cli :as cli]
-    [clojure.java.shell :as sh])
+    [clojure.java.shell :as sh]
+    [crux.api :as crux])
   (:gen-class))
 
 
@@ -98,9 +99,9 @@
         intermediatefilename (construct-filename directory  intermediate  file ".out.md")
         outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))]
         ;one (println "doc2docx.bat " docfile " " docxfile)
-        (if (:docx options) (sh/sh "doc2docx.bat" docfile docxfile))
+       (if (:docx options) (sh/sh "doc2docx.bat" docfile docxfile))
         ;two (println "docx2md.bat " docxfile " " markdownfile)
-        (if (:markdown options) (sh/sh "docx2md.bat" docxfile markdownfile))
+       (if (:markdown options) (sh/sh "docx2md.bat" docxfile markdownfile))
 
     (if (not= exit 0)
       (let [md (process-markdown-file markdownfile)]
@@ -119,6 +120,7 @@
 
 
 (defn -main [& args]
+
   (let [{:keys [style options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
@@ -135,14 +137,21 @@
   (def mdf (construct-filename dir  intermediate  filein ".in.md"))
   (def mdcin (read-markdown mdf))
   (def mdcproc (process-markdown mdcin))
+  (add_entries conn "Himlit" "Revelation" mdcproc)
   (def mdcout (output-markdown "bo" mdcproc))
+
+  (crux/q
+    (crux/db conn)
+    '{:find [chpt]
+      :where [[p1 :chapter chpt]]})
+
 
 
   (loop [  [one two & remaining] m  o []]
     (println one two remaining o)
-    (cond (and (= (:t one) :a) (= (:t two) :b)) (recur ((comp vec flatten conj) [] [] (assoc one :t1 [(:t one) (:t two)]) (flatten remaining)) o)
+    (cond (and (= (:t one) :a) (= (:t two) :b) (recur ((comp vec flatten conj) [] [] (assoc one :t1 [(:t one) (:t two)]) (flatten remaining)) o))
           (and (nil? one) (nil? two)) o
           (nil? two) (let [n (assoc one :t1 [(:t one)])] (recur two (conj o n)))
-          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n)))))
-  )
+          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n))))))
+
 ; (-main "-f" "James.doc" "boeng-cols")
