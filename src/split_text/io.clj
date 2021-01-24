@@ -1,5 +1,6 @@
 (ns split-text.io
   (:require [split-text.config :refer :all]
+
             [clojure.pprint :as pprint]
             [hickory.core :as h]
             [clojure.data.json :as json]
@@ -14,6 +15,17 @@
       (str/replace "\ufffd" "")
       (str/replace "\u00a0" " ")
       (str/trim-newline)))
+
+(defn get-file [fn]
+  (clojure.java.io/file fn))
+
+(defn file-epoch [fn]
+   (.lastModified (get-file fn)))
+
+(defn file-exists? [fn]
+  (.exists (get-file fn)))
+
+(def lastModified (partial file-epoch))
 
 (defn as-hickory-read-file [filename]
   (let [raw (clean (slurp filename))

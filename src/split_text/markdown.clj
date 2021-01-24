@@ -2,6 +2,7 @@
   (:require
     [split-text.config :refer :all]
     [clojure.string :as str]
+    [split-text.io :refer :all]
     [com.rpl.specter :refer :all]))
 
 
@@ -75,6 +76,21 @@
 (defn index-lines [mt]
   (map-indexed (fn [idx itm] (assoc itm :index idx)) mt))
 
+(defn merge-quotations [mt]
+  (loop [  [one two & remaining] mt  o []]
+    ;(println one o)
+    (cond (and (= (:type one) :verse) (= (:type two) :h4))
+          (recur (let [ newone (if (contains? one :fulltext)
+                                 (assoc one :fulltext (assoc (:fulltext one) (:index two) (str "> " (:text two))))
+                                 (assoc one :fulltext  (assoc {} (:index one) (:text one) (:index two) (str "> " (:text two)))))]
+                   ((comp vec flatten conj) [] newone (flatten remaining))) o)
+          (and (nil? one) (nil? two)) o
+          (nil? two) (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
+                       (recur two (conj o (assoc n :fulltext  (:fulltext n)))))
+          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
+                  (recur ((comp vec flatten conj) [] two remaining)
+                         (conj  o (assoc n :fulltext (:fulltext n))))))))
+
 (defn replace_underlines [l]
   (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
         l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight)
@@ -127,16 +143,19 @@
         new-l)
       l))) ;; else just return the original
 
-
-
-
 (defn transform-h4-verse-number [md]
   (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
-  (let [l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
-        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)]
-    l2))
+  (let [; space between normal sentances
+        l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
+        ; space after ga with she at start of next sentence
+        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)
+        ; space after She followed by bracket
+        l3 (str/replace l2 #"(\u0F0D])" sentence-she-bracket-format)
+        ; space (ensp) after colon
+        l4 (str/replace l3 #"(:)(?:\s*)?" sentence-colon-format)]
+    l4))
 
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
@@ -162,7 +181,7 @@
 (defn handle-quotes [e]
   (let [l (:text e)]
     (if (= (:lang e) :bo)
-      (assoc e :text (str/replace (str/replace l "\"" "&quot;") "'" "&apos;"))
+      (assoc e :text (str/replace (str/replace l "\"" "" ) "'" "")) ;"&quot;" "&apos;"
       (assoc e :text l))))
 
 
@@ -183,6 +202,56 @@
 (defn mark-bo-lang-lines [md]
   (vec(transform [ALL] handle-bo-lines md)))
 
+(defn filter-verses [l]
+  ;(or
+  (and (= (:lang l) :bo) (contains? #{ :verse } (:type l))))  ;(= (:type l) :h1)))
+
+(defn get-verses [md]
+  (filter filter-verses md))
+
+
+(defn get-verse-index [md]
+  ( into {} (let [x (partition 3 (select [ALL (multi-path :index :chapter :verse-number)] (get-verses md)))]
+              (for [[k c v] x]
+                (assoc {} k [c (str/trim v)])))))
+
+(defn get-verse-for-h3-entry [indexes entry]
+  (let [verse (first (filter #(< (:index entry) (key %)) indexes))]
+    (last (last verse))))
+
+(defn set-next-verse [indexes e]
+  (assoc e :next-verse (get-verse-for-h3-entry indexes e)))
+
+
+
+(defn allocate-h3-next-verse [md]
+  (let [indexes (sort (get-verse-index md))
+        set-h3-next-verse (partial set-next-verse indexes)]
+    (transform  [ALL #(= (:type %) :h3)] set-h3-next-verse md)))
+
+
+
+(defn get-chapter-entries [md]
+  (filter filter-chapter-eng-headings md))
+
+(defn get-chapters [md]
+ ( into {} (let [x (partition 2 (select [ALL (multi-path :index :text)] (get-chapter-entries md)))]
+            (for [[k v] x]
+              (assoc {} k (str/trim v))))))
+
+(defn get-indexes [chapters]
+  (sort(keys chapters)))
+
+(defn get-chapter-for-entry [chapters indexes entry]
+  (let [chapter-index (last (filter #(>= (inc (:index entry)) %) indexes))]
+    (get chapters (if (nil? chapter-index) (first indexes) chapter-index))))
+
+
+
+(defn allocate-chapters [md]
+  (let [chapters (get-chapters md)
+        indexes (get-indexes chapters)]
+    (map #(assoc % :chapter (get-chapter-for-entry chapters indexes %)) md)))
 
 
 
@@ -201,15 +270,13 @@
       ;(mark-bo-lang-lines)
       (transform-joined-lines)
       (transform-verse-numbers)
+      (allocate-chapters)
+      (allocate-h3-next-verse)
       (transform-h4-verse-number)
       (remove-dir-rtl)
       (transform-sentence-space)
-      (transform-spaces-after-bo-brackets)))
-
-
-
-
-
+      (transform-spaces-after-bo-brackets)
+      (merge-quotations)))
 
 (defn process-markdown-file [filename]
   (-> (read-markdown filename)
