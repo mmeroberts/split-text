@@ -16,6 +16,17 @@
       (str/replace "\u00a0" " ")
       (str/trim-newline)))
 
+(defn get-file [fn]
+  (clojure.java.io/file fn))
+
+(defn file-epoch [fn]
+   (.lastModified (get-file fn)))
+
+(defn file-exists? [fn]
+  (.exists (get-file fn)))
+
+(def lastModified (partial file-epoch))
+
 (defn as-hickory-read-file [filename]
   (let [raw (clean (slurp filename))
         parsed-doc (h/parse raw)]

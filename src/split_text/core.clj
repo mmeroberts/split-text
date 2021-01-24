@@ -4,6 +4,7 @@
     ;[split-text.meta :refer :all]
     ;[split-text.inwards :refer :all]
     ;[split-text.outwards :refer :all]
+    [clojure.java.io :as io]
     [split-text.markdown :refer :all]
     [split-text.db :refer :all]
     [clojure.string :as str]
@@ -97,23 +98,27 @@
         docxfile (construct-filename directory  intermediate  file ".docx")
         markdownfile (construct-filename directory  intermediate  file ".in.md")
         intermediatefilename (construct-filename directory  intermediate  file ".out.md")
-        outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))]
-        ;one (println "doc2docx.bat " docfile " " docxfile)
-       (if (:docx options) (sh/sh "doc2docx.bat" docfile docxfile))
-        ;two (println "docx2md.bat " docxfile " " markdownfile)
-       (if (:markdown options) (sh/sh "docx2md.bat" docxfile markdownfile))
-
+        outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))
+        create-docx (not(or (not (file-exists? docxfile)) (and (file-exists? docxfile)
+                                                               (> (lastModified docfile) (lastModified docxfile)))))
+        create-markdown (not(or (not (file-exists? markdownfile))
+                                (and (file-exists? markdownfile)
+                                 (> (lastModified docxfile) (lastModified markdownfile)))))]
     (if (not= exit 0)
-      (let [md (process-markdown-file markdownfile)]
-        (do (case style
-              "bo" (output-md (output-bo-markdown md) intermediatefilename)
-              "eng" (output-md (output-eng-markdown md) intermediatefilename)
-              "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
-              "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
-              "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
-              "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
-            (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
-            (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet))))))
+        (let [md (process-markdown-file markdownfile)]
+          (do (if create-docx
+                (do (sh/sh "doc2docx.bat" docfile docxfile)
+                    (sh/sh "docx2md.bat" docxfile markdownfile)))
+              (if create-markdown  (sh/sh "docx2md.bat" docxfile markdownfile))
+            (case style
+                "bo" (output-md (output-bo-markdown md) intermediatefilename)
+                "eng" (output-md (output-eng-markdown md) intermediatefilename)
+                "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
+                "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
+                "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
+                "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
+              (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
+              (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet))))))
 
 
 
@@ -127,6 +132,7 @@
       (handle-document style options))))
 
 (comment
+  (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
   (-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "bo")
@@ -135,10 +141,17 @@
   (def dir "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
   (def filein "2020-Revelation-Final")
   (def mdf (construct-filename dir  intermediate  filein ".in.md"))
+  (def markdownfile (construct-filename dir  intermediate  filein ".in.md"))
+  (def docfile (construct-filename dir  original  filein ".doc"))
+  (def docxfile (construct-filename dir  intermediate  filein ".docx"))
   (def mdcin (read-markdown mdf))
   (def mdcproc (process-markdown mdcin))
   (add_entries conn "Himlit" "Revelation" mdcproc)
   (def mdcout (output-markdown "bo" mdcproc))
+  (def intermediatefilename (construct-filename dir  intermediate  filein ".out.md"))
+  (def mdout (output-md (output-bo-markdown mdcproc) intermediatefilename))
+  (def outputfile (construct-filename dir  pre-published filein (str "-" "uniglot" ".html" )))
+  (sh/sh "md2out.bat" intermediatefilename outputfile  "Revelation" stylesheet)
 
   (crux/q
     (crux/db conn)
@@ -152,6 +165,7 @@
     (cond (and (= (:t one) :a) (= (:t two) :b) (recur ((comp vec flatten conj) [] [] (assoc one :t1 [(:t one) (:t two)]) (flatten remaining)) o))
           (and (nil? one) (nil? two)) o
           (nil? two) (let [n (assoc one :t1 [(:t one)])] (recur two (conj o n)))
-          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n))))))
+          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n)))))
+  ,)
 
 ; (-main "-f" "James.doc" "boeng-cols")

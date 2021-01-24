@@ -147,16 +147,22 @@
   (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
-  (let [l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
-        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)]
-    l2))
+  (let [; space between normal sentances
+        l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
+        ; space after ga with she at start of next sentence
+        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)
+        ; space after She followed by bracket
+        l3 (str/replace l2 #"(\u0F0D])" sentence-she-bracket-format)
+        ; space (ensp) after colon
+        l4 (str/replace l3 #"(:)(?:\s*)?" sentence-colon-format)]
+    l4))
 
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
 
 (defn handle-spaces-after-bo-brackets [l]
   (let [l1 (str/replace l #"(?:\s+)?(\(|\[)" "$1")
-        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1&#x200A")]
+        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1\u200A")]
     l2))
 
 (defn transform-spaces-after-bo-brackets [md]
@@ -175,7 +181,7 @@
 (defn handle-quotes [e]
   (let [l (:text e)]
     (if (= (:lang e) :bo)
-      (assoc e :text (str/replace (str/replace l "\"" "&quot;") "'" "&apos;"))
+      (assoc e :text (str/replace (str/replace l "\"" "" ) "'" "")) ;"&quot;" "&apos;"
       (assoc e :text l))))
 
 
@@ -271,11 +277,6 @@
       (transform-sentence-space)
       (transform-spaces-after-bo-brackets)
       (merge-quotations)))
-
-
-
-
-
 
 (defn process-markdown-file [filename]
   (-> (read-markdown filename)
