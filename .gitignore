@@ -125,10 +125,7 @@ James-bo.html
 ~$James.doc
 .nrepl-port
 workspace.xml
-/.idea/workspace.xml
-/.idea
-/texts
 /.cpcache
-
+/.idea
 /data
-/.idea/workspace.xml
+/texts
