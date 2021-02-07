@@ -1,6 +1,7 @@
 (ns split-text.markdown
   (:require
     [split-text.config :refer :all]
+    [split-text.db :refer :all]
     [clojure.string :as str]
     [split-text.io :refer :all]
     [com.rpl.specter :refer :all]))
@@ -78,8 +79,8 @@
 
 (defn merge-quotations [mt]
   (loop [  [one two & remaining] mt  o []]
-    ;(println one o)
-    (cond (and (= (:type one) :verse) (= (:type two) :h4))
+    ;(println "first check:" (and (contains? one :verse-number) (= (:type two) :h4) (= (:lang one) (:lang two))))
+    (cond (and (contains? one :verse-number) (= (:type two) :h4) (= (:lang one) (:lang two)))
           (recur (let [ newone (if (contains? one :fulltext)
                                  (assoc one :fulltext (assoc (:fulltext one) (:index two) (str "> " (:text two))))
                                  (assoc one :fulltext  (assoc {} (:index one) (:text one) (:index two) (str "> " (:text two)))))]
@@ -204,7 +205,7 @@
 
 (defn filter-verses [l]
   ;(or
-  (and (= (:lang l) :bo) (contains? #{ :verse } (:type l))))  ;(= (:type l) :h1)))
+    (contains? #{ :verse } (:type l)))  ;(= (:type l) :h1)))
 
 (defn get-verses [md]
   (filter filter-verses md))
@@ -256,7 +257,7 @@
 
 
 
-(defn process-markdown [md]
+(defn process-markdown-1 [md]
   (-> md
       (clean-markdown)
       (flatten)
@@ -264,13 +265,15 @@
       (classify-language)
       (classify-type)
       (index-lines)
+      (allocate-chapters)))
+(defn process-markdown-2 [md]
+  (-> md
       (transform-underlines)
       (transform-heading-underlines)
       (transform-quotes)
       ;(mark-bo-lang-lines)
       (transform-joined-lines)
       (transform-verse-numbers)
-      (allocate-chapters)
       (allocate-h3-next-verse)
       (transform-h4-verse-number)
       (remove-dir-rtl)
@@ -278,9 +281,14 @@
       (transform-spaces-after-bo-brackets)
       (merge-quotations)))
 
-(defn process-markdown-file [filename]
-  (-> (read-markdown filename)
-      (process-markdown)))
+(defn process-markdown-file [filename title source]
+  (let [pass1 (-> (read-markdown filename)
+                  (process-markdown-1))
+        grouped (group-by :lang pass1)]
+    (for [[k v] grouped]
+      (let [md (process-markdown-2 v)]
+        (add_entries conn source title md)))))
+
 
 (defn filter-markdown-for-eng [l]
   (and (= (:lang l) :english) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l))))

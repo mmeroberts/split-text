@@ -21,8 +21,7 @@
   [["-f" "--file FILENAME" "Filename without path or extension"]
    ["-d" "--directory DIRECTORY" "Directory that contains the working folders"]
    ["-t" "--title TITLE" "The Title of the document"]
-   ["-x" "--docx" "convert to docx" :default false]
-   ["-m" "--markdown"  "convert to markdown" :default false]
+   ["-s" "--source SOURCE" "Source of Document" :default "Himlit"]
 
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
@@ -37,19 +36,19 @@
 (defn usage [options-summary]
   (->> ["Format documents"
         ""
-        "Usage: program-name [options] style"
+        "Usage: program-name [options] "
         ""
         "Options:"
         options-summary
         ""
-        "Style:"
-        "  bo         Print tibetan - will include english titles"
-        "  eng        Print english text"
-        "  back       Print back translation - will include english titles and headers"
-        "  boeng      Print tibetan and english interleaved"
-        "  boeng-cols  Print tibetan and english in columns"
-        "  boback     Print tibetan and back translation interleaved"
-        "  all        Print full document - all languages"
+        ;"Style:"
+        ;"  bo         Print tibetan - will include english titles"
+        ;"  eng        Print english text"
+        ;"  back       Print back translation - will include english titles and headers"
+        ;"  boeng      Print tibetan and english interleaved"
+        ;"  boeng-cols  Print tibetan and english in columns"
+        ;"  boback     Print tibetan and back translation interleaved"
+        ;"  all        Print full document - all languages"
         ""
         "Please refer to the manual page for more information."]
        (str/join \newline)))
@@ -70,9 +69,12 @@
       errors ; errors => exit with description of errors
       {:exit-message (error-msg errors)}
       ;; custom validation on arguments
+
       (and (= 1 (count arguments))
            (#{"bo" "bo-nav" "eng" "back" "boeng" "boeng-nav" "boeng-cols" "boback" "all"} (first arguments)))
       {:style (first arguments) :options options}
+      (:title options) ; catch all check - titlemust be defined.
+      {:options options}
       :else ; failed custom validation => exit with usage summary
       {:exit-message (usage summary)})))
 
@@ -83,9 +85,49 @@
 (defn construct-filename [ d s f e]
   (str  d "\\" s "\\" f e))
 
-(defn handle-document [style options]
+(defn handle-document [ options]
   (tap> (str options))
-  (let [{:keys [output file title directory]} options
+  (let [{:keys [file title directory source]} options
+        ;filestub (first (str/split file #"\."))
+        ;suffix (cond (= style "bo")  "uniglot"
+        ;             (= style "eng")  "english"
+        ;             (= style "bo-nav")  "uniglot-nav"
+        ;             (= style "boeng") "diglot-interlinear"
+        ;             (= style "boeng-nav") "diglot-interlinear-nav"
+        ;             (= style "boeng-cols") "diglot-side-by-side")
+
+        docfile (construct-filename directory  original  file ".doc")
+        docxfile (construct-filename directory  intermediate  file ".docx")
+        markdownfile (construct-filename directory  intermediate  file ".in.md")
+        intermediatefilename (construct-filename directory  intermediate  file ".out.md")
+        ;outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))
+        create-docx (or (not (file-exists? docxfile)) (and (file-exists? docxfile)
+                                                               (> (lastModified docfile) (lastModified docxfile))))
+        create-markdown (or (not (file-exists? markdownfile))
+                                (and (file-exists? markdownfile)
+                                 (> (lastModified docxfile) (lastModified markdownfile))))]
+    (if (not= exit 0)
+        (do(println  create-docx ", " create-markdown ".")
+          (if create-docx
+              (do (sh/sh "doc2docx.bat" docfile docxfile)
+                  (sh/sh "docx2md.bat" docxfile markdownfile)))
+            (if create-markdown  (sh/sh "docx2md.bat" docxfile markdownfile))
+            (process-markdown-file markdownfile title source)
+           )))
+  )
+                ;(case style
+                ;  "bo" (output-md (output-bo-markdown md) intermediatefilename)
+                ;  "eng" (output-md (output-eng-markdown md) intermediatefilename)
+                ;  "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
+                ;  "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
+                ;  "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
+                ;  "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
+                ;(println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
+                ;(sh/sh "md2out.bat" intermediatefilename outputfile title stylesheet))
+
+(defn output-document [style options]
+  (tap> (str options))
+  (let [{:keys [file title directory source]} options
         ;filestub (first (str/split file #"\."))
         suffix (cond (= style "bo")  "uniglot"
                      (= style "eng")  "english"
@@ -98,28 +140,29 @@
         docxfile (construct-filename directory  intermediate  file ".docx")
         markdownfile (construct-filename directory  intermediate  file ".in.md")
         intermediatefilename (construct-filename directory  intermediate  file ".out.md")
-        outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))
+        ;outputfile (construct-filename directory  pre-published file (str "-" suffix "." output))
         create-docx (not(or (not (file-exists? docxfile)) (and (file-exists? docxfile)
                                                                (> (lastModified docfile) (lastModified docxfile)))))
         create-markdown (not(or (not (file-exists? markdownfile))
                                 (and (file-exists? markdownfile)
-                                 (> (lastModified docxfile) (lastModified markdownfile)))))]
+                                     (> (lastModified docxfile) (lastModified markdownfile)))))]
     (if (not= exit 0)
-        (let [md (process-markdown-file markdownfile)]
-          (do (if create-docx
-                (do (sh/sh "doc2docx.bat" docfile docxfile)
-                    (sh/sh "docx2md.bat" docxfile markdownfile)))
-              (if create-markdown  (sh/sh "docx2md.bat" docxfile markdownfile))
-            (case style
-                "bo" (output-md (output-bo-markdown md) intermediatefilename)
-                "eng" (output-md (output-eng-markdown md) intermediatefilename)
-                "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
-                "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
-                "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
-                "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
-              (println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
-              (sh/sh "md2out.bat" intermediatefilename outputfile  title stylesheet))))))
-
+      (do (println  create-docx ", " create-markdown ".")
+        (if create-docx
+          (do (sh/sh "doc2docx.bat" docfile docxfile)
+              (sh/sh "docx2md.bat" docxfile markdownfile)))
+          (if create-markdown  (sh/sh "docx2md.bat" docxfile markdownfile)))))
+          ;(process-markdown-file markdownfile title source))))
+  )
+;(case style
+;  "bo" (output-md (output-bo-markdown md) intermediatefilename)
+;  "eng" (output-md (output-eng-markdown md) intermediatefilename)
+;  "bo-nav" (output-md-with-navigation (output-bo-markdown md) md style intermediatefilename)
+;  "boeng" (output-md (output-boeng-markdown md) intermediatefilename)
+;  "boeng-nav" (output-md-with-navigation (output-boeng-markdown md) md style intermediatefilename)
+;  "boeng-cols" (output-md (output-boeng-interlinear md) intermediatefilename))
+;(println "md2out.bat " intermediatefilename " " outputfile " " title " " stylesheet)
+;(sh/sh "md2out.bat" intermediatefilename outputfile title stylesheet))
 
 
 
@@ -129,12 +172,16 @@
   (let [{:keys [style options exit-message ok?]} (validate-args args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (handle-document style options))))
+      (handle-document options))))
 
 (comment
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
+  (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "-s" "Himlit")
+  (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation")
+  (-main "-t" "Revelation" "bo")
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
   (-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
+  (-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "bo")
   (-main "-f" "2020-Revelation-final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "boeng")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "boeng")
@@ -145,18 +192,19 @@
   (def docfile (construct-filename dir  original  filein ".doc"))
   (def docxfile (construct-filename dir  intermediate  filein ".docx"))
   (def mdcin (read-markdown mdf))
-  (def mdcproc (process-markdown mdcin))
+  (def mdcproc (process-markdown-1 mdcin))
+  (def mdcg (group-by :lang mdcproc))
+  (def mdcgeng (:english mdcg))
+  (def mdceng2 (process-markdown-2 mdcgeng))
+  (def mdcproc1 (process-markdown-file mdf "Revelation" "Himlit1"))
   (add_entries conn "Himlit" "Revelation" mdcproc)
   (def mdcout (output-markdown "bo" mdcproc))
   (def intermediatefilename (construct-filename dir  intermediate  filein ".out.md"))
   (def mdout (output-md (output-bo-markdown mdcproc) intermediatefilename))
-  (def outputfile (construct-filename dir  pre-published filein (str "-" "uniglot" ".html" )))
+  (def outputfile (construct-filename dir  pre-published filein (str "-" "uniglot" ".html")))
   (sh/sh "md2out.bat" intermediatefilename outputfile  "Revelation" stylesheet)
 
-  (crux/q
-    (crux/db conn)
-    '{:find [chpt]
-      :where [[p1 :chapter chpt]]})
+
 
 
 
