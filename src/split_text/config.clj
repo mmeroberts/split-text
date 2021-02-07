@@ -28,6 +28,7 @@
 (def sentence-ka-she-format "$1&emsp;$2")
 (def sentence-she-bracket-format "$1&emsp;")
 (def sentence-colon-format "$1&ensp;")
+(def ignore-quotations? false)
 
 (def bo-brackets "<span class=\"bo-brackets\">$1</span>")
 

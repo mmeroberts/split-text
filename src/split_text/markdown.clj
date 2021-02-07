@@ -80,15 +80,16 @@
 (defn merge-quotations [mt]
   (loop [  [one two & remaining] mt  o []]
     ;(println "first check:" (and (contains? one :verse-number) (= (:type two) :h4) (= (:lang one) (:lang two))))
-    (cond (and (contains? one :verse-number) (= (:type two) :h4) (= (:lang one) (:lang two)))
+    (cond (and (contains? one :verse-number) (and (= (:type two) :h4) (not (contains? two :verse-number)))  (= (:lang one) (:lang two))) ; quotation exists
           (recur (let [ newone (if (contains? one :fulltext)
-                                 (assoc one :fulltext (assoc (:fulltext one) (:index two) (str "> " (:text two))))
-                                 (assoc one :fulltext  (assoc {} (:index one) (:text one) (:index two) (str "> " (:text two)))))]
+                                 (assoc one :fulltext (assoc (:fulltext one) (:index two) (str "> " (str/trim (:text two)))))
+                                 (assoc one :fulltext  (assoc {} (:index one) (if (= (:type one) :h4) (str "> " (str/trim (:text one))) (:text one)) (:index two) (str ">" (:text two)))))]
                    ((comp vec flatten conj) [] newone (flatten remaining))) o)
-          (and (nil? one) (nil? two)) o
-          (nil? two) (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
+          (and (nil? one) (nil? two)) o ; final exit
+          (nil? two) (let [n (if (not (contains? one :fulltext))
+                               (assoc one :fulltext (assoc {} (:index one) (if (= (:type one) :h4) (str "> " (str/trim (:text one))) (:text one)))) one)]
                        (recur two (conj o (assoc n :fulltext  (:fulltext n)))))
-          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (:text one))) one)]
+          :else (let [n (if (not (contains? one :fulltext)) (assoc one :fulltext (assoc {} (:index one) (if (= (:type one) :h4) (str "> " (str/trim (:text one))) (:text one)))) one)]
                   (recur ((comp vec flatten conj) [] two remaining)
                          (conj  o (assoc n :fulltext (:fulltext n))))))))
 
@@ -289,121 +290,3 @@
       (let [md (process-markdown-2 v)]
         (add_entries conn source title md)))))
 
-
-(defn filter-markdown-for-eng [l]
-  (and (= (:lang l) :english) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l))))
-
-(defn filter-markdown-for-bo [l]
-  (or (and (= (:lang l) :bo) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l)))
-      (and    (= (:lang l) :english) (contains? #{ :h2 :h1} (:type l)))))
-
-(defn filter-markdown-for-boeng [l]
-  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l)))  (= (:type l) :h1)))
-
-(defn wrap-verse-in-span [l lang]
-  "Wrap a line that starts with a verse number in a span with class of lang"
-  (if (str/starts-with? l "<span>")
-    (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
-          sol (subs l 0 end-of-vn-span)
-          span (subs l end-of-vn-span)]
-      (str sol "<span class=\"v-" (name lang) "\">" span "</span>\n"))
-    (str "<span class=\"v-" (name lang) "\">" l "</span>\n")))
-
-(defn wrap-quote-in-span [l lang]
-  "Wrap a line that starts with a verse number in a span with class of lang"
-  (if (str/starts-with? l "<span>")
-    (let [end-of-vn-span (+ 7 (str/index-of l "</span>"))
-          sol (subs l 0 end-of-vn-span)
-          span (subs l end-of-vn-span)]
-      (str sol "<span class=\"vq-" (name lang) "\">" span "</span>\n"))
-    (str "<span class=\"vq-" (name lang) "\">" l "</span>\n")))
-
-(defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
-
-(defn transform-underline-style-line [l]
-  (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
-
-(defn process-text [lang text]
-  (if (= lang :bo)
-    (->  text
-         (handle-bo-brackets)
-         (transform-underline-style-line))
-    text))
-
-(defn h1 [_ l]
-  (let [lang (:lang l)
-        text (process-text lang (:text l))]
-    (str "<h1 class=\"h1-" (name lang) "\">" text "</h1>\n")))
-
-(defn h2 [style l]
-  (let [lang (:lang l)
-        text (:text l)]
-    (cond (and (= style :boeng-cols) (= lang :english))
-          (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
-          (and (or (= style :boeng)(= style :bo)) (= lang :bo))
-          (str  row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
-          :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))))
-
-(defn h3 [_ l]
-  (let [lang (:lang l)
-        text (process-text lang (:text l))]
-    (str "<h3 class=\"h3-" (name lang) "\">" text "</h3>\n")))
-
-(defn h5 [_ l]
-  (let [lang (:lang l)
-        text (process-text lang (:text l))]
-    (str "<h5 class=\"h5-" (name lang) "\">" text "</h5>\n")))
-
-(defn h4 [_ l]
-  (let [lang (:lang l)
-        text (:text l)
-        vn (str "<span class=\"vn\">" (:verse-number l) "</span>")
-        itext (wrap-quote-in-span (process-text lang (str vn " " text)) lang)]
-    (str "<div class=\"q-" (name lang) "\">" itext "</div>\n")))
-
-(defn verse [_ l]
-  (let [lang (:lang l)
-        text (:text l)
-        vn (str "<span class=\"vn\">" (:verse-number l) "</span>")
-        itext (wrap-verse-in-span (process-text lang (str vn " " text)) lang)]
-    (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))
-
-(defn output-markdown [style md]
-        (for [l md]
-          (let [ftype (resolve (symbol (:type l)))
-                ;x (println "!" lang "!" type "!" text "!")
-                out (ftype style l)]
-            out)))
-
-
-(defn output-div-pairs [md]
-  (let [header (take-while #(= (:type %) :h1) md)
-        outputhead (reduce str(output-markdown :boeng-cols header))
-        body (drop (count header) md)
-        outputbody (loop  [[left right & rest] body output ""]
-                     (if (empty? left)
-                       output
-                       (let [spans  (reduce str (doall (output-markdown :boeng-cols (into [] (list right left)))))
-                             div (str "<div class=\"verse\">" spans "</div>\n")]
-                         (recur rest (str output div)))))]
-    (str outputhead outputbody)))
-
-
-(defn output-bo-markdown [md]
-  (output-markdown :bo (filter filter-markdown-for-bo md)))
-
-(defn output-eng-markdown [md]
-  (output-markdown :eng (filter filter-markdown-for-eng md)))
-
-(defn output-boeng-markdown [md]
-  (output-markdown :boeng (filter filter-markdown-for-boeng md)))
-
-(defn output-boeng-interlinear [md]
-  (output-div-pairs (filter filter-markdown-for-boeng md)))
-
-
-;; post processing
-;pandoc -s .\ProcessJames.md -c .\resources\css\main.css --metadata title="James" -o ProcessJamesBo.html
-
-;C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s "James.out.md" -A .\resources\html\footer.html -c .\resources\css\main.css    -o "James.html"

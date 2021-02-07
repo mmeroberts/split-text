@@ -6,6 +6,7 @@
     ;[split-text.outwards :refer :all]
     [clojure.java.io :as io]
     [split-text.markdown :refer :all]
+    [split-text.markdownout :refer :all]
     [split-text.db :refer :all]
     [clojure.string :as str]
     [com.rpl.specter :refer :all]
@@ -22,6 +23,7 @@
    ["-d" "--directory DIRECTORY" "Directory that contains the working folders"]
    ["-t" "--title TITLE" "The Title of the document"]
    ["-s" "--source SOURCE" "Source of Document" :default "Himlit"]
+   ["-T" "--Test" "Test Dry Run" ]
 
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
@@ -108,11 +110,11 @@
                                  (> (lastModified docxfile) (lastModified markdownfile))))]
     (if (not= exit 0)
         (do(println  create-docx ", " create-markdown ".")
-          (if create-docx
-              (do (sh/sh "doc2docx.bat" docfile docxfile)
-                  (sh/sh "docx2md.bat" docxfile markdownfile)))
-            (if create-markdown  (sh/sh "docx2md.bat" docxfile markdownfile))
-            (process-markdown-file markdownfile title source)
+           (if create-docx
+             (do (sh/sh "doc2docx.bat" docfile docxfile)
+                 (sh/sh "docx2md.bat" docxfile markdownfile))
+             (if create-markdown (sh/sh "docx2md.bat" docxfile markdownfile)))
+           (process-markdown-file markdownfile title source)
            )))
   )
                 ;(case style
@@ -186,6 +188,7 @@
   (-main "-f" "2020-Revelation-final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "boeng")
   (-main "-f" "2020-Revelation-letters" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation Letters" "boeng")
   (def dir "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
+  (def filein "Revelation-test")
   (def filein "2020-Revelation-Final")
   (def mdf (construct-filename dir  intermediate  filein ".in.md"))
   (def markdownfile (construct-filename dir  intermediate  filein ".in.md"))
