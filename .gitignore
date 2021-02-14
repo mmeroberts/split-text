@@ -30,4 +30,7 @@ James-bo.html
 ~$James.doc
 .nrepl-port
 workspace.xml
+/.cpcache
 /.idea
+/data
+/texts

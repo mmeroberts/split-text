@@ -145,27 +145,37 @@
         new-l)
       l))) ;; else just return the original
 
+
+
+
 (defn transform-h4-verse-number [md]
   (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
-  (let [; space between normal sentances
-        l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
+  (-> l
+        ; space between normal sentances
+        (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
         ; space after ga with she at start of next sentence
-        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)
+        (str/replace  #"(\u0F42)(\u0F0D)" sentence-ka-she-format)
         ; space after She followed by bracket
-        l3 (str/replace l2 #"(\u0F0D])" sentence-she-bracket-format)
-        ; space (ensp) after colon
-        l4 (str/replace l3 #"(:)(?:\s*)?" sentence-colon-format)]
-    l4))
+        (str/replace  #"(\u0F0D])" sentence-she-bracket-format)
+        (str/replace  #"(\u0F0D\)) " sentence-she-bracket-format)
+        ;remove colons after shed
+        (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&ensp;")
+        ; remove colons after ga at end of text
+        (str/replace  #"(ག|\u0F42):(.)?$" "$1")
+        ; remove colons after ga
+        (str/replace  #"(ག|\u0F42):(\s)?" "$1&ensp;།")
+        ; remove final colon
+        (str/replace  #":(\s)" "")))
 
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
 
 (defn handle-spaces-after-bo-brackets [l]
-  (let [l1 (str/replace l #"(?:\s+)?(\(|\[)" "$1")
-        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1\u200A")]
-    l2))
+  (-> l
+      (str/replace  #"(?:\s+)?(\(|\[)" "$1")
+      (str/replace  #"(\)|\])(\s+)?" "$1\u200A")))
 
 (defn transform-spaces-after-bo-brackets [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-spaces-after-bo-brackets md)))
@@ -207,23 +217,28 @@
 (defn filter-verses [l]
   ;(or
     (contains? #{ :verse } (:type l)))  ;(= (:type l) :h1)))
-
 (defn get-verses [md]
   (filter filter-verses md))
-
-
 (defn get-verse-index [md]
   ( into {} (let [x (partition 3 (select [ALL (multi-path :index :chapter :verse-number)] (get-verses md)))]
               (for [[k c v] x]
                 (assoc {} k [c (str/trim v)])))))
-
 (defn get-verse-for-h3-entry [indexes entry]
   (let [verse (first (filter #(< (:index entry) (key %)) indexes))]
     (last (last verse))))
+  (let [l1 (str/replace l #"\\\*" "<span class=\"bo-ref\">*</span>")]
+    (str/replace l1 #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|3:1-15)" bo-brackets)))
 
 (defn set-next-verse [indexes e]
   (assoc e :next-verse (get-verse-for-h3-entry indexes e)))
 
+(defn process-text [lang text]
+  (if (= lang :bo)
+    (let [res (->  text
+         (transform-underline-style-line)
+         (handle-bo-brackets))]
+          res)
+    text))
 
 
 (defn allocate-h3-next-verse [md]

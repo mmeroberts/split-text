@@ -180,6 +180,11 @@ span.underline {
 span.bo-brackets {
     font-size: 12pt;
 }
+
+span.bo-ref {
+    vertical-align: super;
+    font-size: 8pt;
+}
 .footer {
     align-content: center;
 }
