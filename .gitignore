@@ -34,3 +34,5 @@ workspace.xml
 /.idea
 /data
 /texts
+
+/split-text.iml
