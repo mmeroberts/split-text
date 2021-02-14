@@ -26,6 +26,8 @@
 (def verse-number-format "<span class=\"vn\">$1</span> $2")
 (def sentence-space-format "$1$2&emsp;")
 (def sentence-ka-she-format "$1&emsp;$2")
+(def sentence-she-bracket-format "$1&emsp;")
+(def sentence-colon-format "$1&ensp;")
 (def bo-brackets "<span class=\"bo-brackets\">$1</span>")
 
 (def original "pre-processing")

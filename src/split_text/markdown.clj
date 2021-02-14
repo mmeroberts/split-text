@@ -134,17 +134,30 @@
   (vec(transform [ALL #(= (:type %) :h4)  ] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
-  (let [l1 (str/replace l #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
-        l2 (str/replace l1 #"(\u0F42)(\u0F0D)" sentence-ka-she-format)]
-    l2))
+  (-> l
+        ; space between normal sentances
+        (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\)|\"|&quot;)?(?!$)(\s+)(?!$)" sentence-space-format)
+        ; space after ga with she at start of next sentence
+        (str/replace  #"(\u0F42)(\u0F0D)" sentence-ka-she-format)
+        ; space after She followed by bracket
+        (str/replace  #"(\u0F0D])" sentence-she-bracket-format)
+        (str/replace  #"(\u0F0D\)) " sentence-she-bracket-format)
+        ;remove colons after shed
+        (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&ensp;")
+        ; remove colons after ga at end of text
+        (str/replace  #"(ག|\u0F42):(.)?$" "$1")
+        ; remove colons after ga
+        (str/replace  #"(ག|\u0F42):(\s)?" "$1&ensp;།")
+        ; remove final colon
+        (str/replace  #":(\s)" "")))
 
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
 
 (defn handle-spaces-after-bo-brackets [l]
-  (let [l1 (str/replace l #"(?:\s+)?(\(|\[)" "$1")
-        l2 (str/replace l1 #"(\)|\])(\s+)?" "$1\u200A")]
-    l2))
+  (-> l
+      (str/replace  #"(?:\s+)?(\(|\[)" "$1")
+      (str/replace  #"(\)|\])(\s+)?" "$1\u200A")))
 
 (defn transform-spaces-after-bo-brackets [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-spaces-after-bo-brackets md)))
@@ -162,7 +175,7 @@
 (defn handle-quotes [e]
   (let [l (:text e)]
     (if (= (:lang e) :bo)
-      (assoc e :text (str/replace (str/replace l "\"" "&quot;") "'" "&apos;"))
+      (assoc e :text (str/replace (str/replace l "\"" "") "'" ""))
       (assoc e :text l))))
 
 
@@ -182,10 +195,6 @@
 
 (defn mark-bo-lang-lines [md]
   (vec(transform [ALL] handle-bo-lines md)))
-
-
-
-
 
 (defn process-markdown [md]
   (-> md
@@ -244,16 +253,18 @@
     (str "<span class=\"vq-" (name lang) "\">" l "</span>\n")))
 
 (defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
+  (let [l1 (str/replace l #"\\\*" "<span class=\"bo-ref\">*</span>")]
+    (str/replace l1 #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|3:1-15)" bo-brackets)))
 
 (defn transform-underline-style-line [l]
   (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
 
 (defn process-text [lang text]
   (if (= lang :bo)
-    (->  text
-         (handle-bo-brackets)
-         (transform-underline-style-line))
+    (let [res (->  text
+         (transform-underline-style-line)
+         (handle-bo-brackets))]
+          res)
     text))
 
 (defn h1 [_ l]
@@ -292,7 +303,7 @@
         text (:text l)
         vn (str "<span class=\"vn\">" (:verse-number l) "</span>")
         itext (wrap-verse-in-span (process-text lang (str vn " " text)) lang)]
-    (str "<div class=\"p-" (name lang) "\">" itext "</div>\n")))
+    (str "<div class=\"p-" (name lang) "\">"itext "</div>\n")))
 
 (defn output-markdown [style md]
         (for [l md]
