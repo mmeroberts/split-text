@@ -6,6 +6,7 @@
     ;[split-text.outwards :refer :all]
     [clojure.java.io :as io]
     [split-text.markdown :refer :all]
+    [split-text.config :refer :all]
     [split-text.markdownout :refer :all]
     [split-text.db :refer :all]
     [clojure.string :as str]
@@ -177,8 +178,9 @@
       (handle-document options))))
 
 (comment
-  (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
+  (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation1" "bo")
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "-s" "Himlit")
+  (-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "-s" "Himlit")
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation")
   (-main "-t" "Revelation" "bo")
   (-main "-f" "Revelation-test" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-x" "-m" "-t" "Revelation" "bo")
@@ -203,9 +205,18 @@
   (add_entries conn "Himlit" "Revelation" mdcproc)
   (def mdcout (output-markdown "bo" mdcproc))
   (def intermediatefilename (construct-filename dir  intermediate  filein ".out.md"))
+  (def intermediateengfilename (construct-filename dir  intermediate  filein "eng.out.md"))
+  (def intermediateintfilename (construct-filename dir  intermediate  filein "int.out.md"))
   (def mdout (output-md (output-bo-markdown mdcproc) intermediatefilename))
+
   (def outputfile (construct-filename dir  pre-published filein (str "-" "uniglot" ".html")))
+  (def outputengfile (construct-filename dir  pre-published filein (str "-" "english" ".html")))
+  (def outputdigfile (construct-filename dir  pre-published filein (str "-" "diglot" ".html")))
   (sh/sh "md2out.bat" intermediatefilename outputfile  "Revelation" stylesheet)
+  (sh/sh "md2out.bat" intermediateengfilename outputengfile  "Revelation" stylesheet)
+
+  (def mdoutint (output-md (output-boeng-markdown "Revelation") intermediateintfilename))
+  (sh/sh "md2out.bat" intermediateintfilename outputdigfile  "Revelation" stylesheet)
 
 
 

@@ -29,6 +29,13 @@
 (def sentence-she-bracket-format "$1&emsp;")
 (def sentence-colon-format "$1&ensp;")
 (def ignore-quotations? false)
+(def print_debug? false)
+(defn debug [& more]
+  (if print_debug?
+    (apply prn more)))
+
+(def split-verse-normal #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+)*)")
+(def split-verse-24 #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+|24)*)")
 
 (def bo-brackets "<span class=\"bo-brackets\">$1</span>")
 

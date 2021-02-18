@@ -29,7 +29,10 @@
     (:strings new)))
 
 (defn split-verses [verstr]
-  (select [ALL FIRST] (re-seq #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+)*)" verstr)));;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
+  (let [regex (if (str/includes? verstr "(24)") split-verse-24 split-verse-normal)
+        parts (select [ALL FIRST] (re-seq regex verstr))]
+    parts))
+        ;;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
 
 (defn handle-text [t]
   "looks for lines of text that are deemed as text - they are not headings or blanks"
@@ -216,9 +219,11 @@
 
 (defn filter-verses [l]
   ;(or
-    (contains? #{ :verse } (:type l)))  ;(= (:type l) :h1)))
+    (contains? #{ :verse } (:type l)))
+;(= (:type l) :h1)))
 (defn get-verses [md]
   (filter filter-verses md))
+
 (defn get-verse-index [md]
   ( into {} (let [x (partition 3 (select [ALL (multi-path :index :chapter :verse-number)] (get-verses md)))]
               (for [[k c v] x]
@@ -226,19 +231,10 @@
 (defn get-verse-for-h3-entry [indexes entry]
   (let [verse (first (filter #(< (:index entry) (key %)) indexes))]
     (last (last verse))))
-  (let [l1 (str/replace l #"\\\*" "<span class=\"bo-ref\">*</span>")]
-    (str/replace l1 #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|3:1-15)" bo-brackets)))
 
 (defn set-next-verse [indexes e]
   (assoc e :next-verse (get-verse-for-h3-entry indexes e)))
 
-(defn process-text [lang text]
-  (if (= lang :bo)
-    (let [res (->  text
-         (transform-underline-style-line)
-         (handle-bo-brackets))]
-          res)
-    text))
 
 
 (defn allocate-h3-next-verse [md]

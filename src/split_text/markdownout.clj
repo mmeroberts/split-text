@@ -7,21 +7,24 @@
     [com.rpl.specter :refer :all]))
 
 
+
 (defn filter-markdown-for-eng [l]
-  (and (= (:lang l) :english) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l))))
+  (and (= (:lang l) :english) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l))))
 
 (defn filter-markdown-for-bo [l]
-  (or (and (= (:lang l) :bo) (contains? #{ :verse :h1 :h2 :h3 :h4 :h5} (:type l)))
-      (and    (= (:lang l) :english) (contains? #{ :h2 :h1} (:type l)))))
+  (or (and (= (:lang l) :bo) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l)))
+      (and (= (:lang l) :english) (contains? #{:h2 :h1} (:type l)))))
 
 (defn filter-markdown-for-boeng [l]
-  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l)))  (= (:type l) :h1)))
+  (or (and (contains? #{:bo :english} (:lang l)) (contains? #{:verse :h1 :h2 :h3 :h4 :h5} (:type l))) (= (:type l) :h1)))
 
 
 
 
 (defn handle-bo-brackets [l]
-  (str/replace l #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|an ERV paraphrase|\&apos;|\&quot;)" bo-brackets))
+  (let [l1 (str/replace l #"\\\*" "<span class=\"bo-ref\">*</span>")]
+    (str/replace l1 #"(\[\d+\]|[\(\)\[\]\:]|\d+\:\d+(\-\d+)?|[0-9]+,[0-9]+|666|216|24|an ERV paraphrase|3:1-15)" bo-brackets)))
+
 
 (defn transform-underline-style-line [l]
   (str/replace l #"(\{(.+?)\})" split-text.config/name-highlight-style))
@@ -35,14 +38,14 @@
 
 (defn wrap-quote-in-span [lang text]
   (if (str/starts-with? text "> ")
-    (str "> <span class=\"vq-" (name lang) "\">" (subs text  2) "</span>\n")
+    (str "<span class=\"vq-" (name lang) "\">" (subs text 2) "</span>\n")
     text))
 
 
 (defn handle-quotations [l]
   (if ignore-quotations?
     (let [pass1 (str/join (select [:lines ALL :line] l))
-          pass2 (str/replace pass1 #"\> " "")]
+          pass2 (str/replace pass1 #"^\> " "")]
       pass2)
     (let [wrapquote (partial wrap-quote-in-span (:lang l))]
       (transform [:lines ALL :line] wrapquote l))))
@@ -52,20 +55,20 @@
     (transform [:lines ALL :line] wrapverse l)))
 
 (defn process-bo-text [text]
-    (-> text
-        (handle-bo-brackets)
-        (transform-underline-style-line)))
+  (-> text
+      (handle-bo-brackets)
+      (transform-underline-style-line)))
 
 (defn add-verse-number [verse-number text]
   (if (str/starts-with? text "> ")
-    (str "> " "<span class=\"vn\">" verse-number "</span>" (subs text 2))
-    (str "<span class=\"vn\">" verse-number "</span>" text)))
+    (str "> " "<span class=\"vn\">" verse-number "</span> " (subs text 2))
+    (str "<span class=\"vn\">" verse-number "</span> " text)))
 
 
 (defn attach-verse-number [l]
-  (let [min-lineno (apply min (select [:lines ALL :line-no ] l))
+  (let [min-lineno (apply min (select [:lines ALL :line-no] l))
         add-vn (partial add-verse-number (:verse-number l))]
-    (transform  [:lines ALL #(= (:line-no %) min-lineno) :line] add-vn l)))
+    (transform [:lines ALL #(= (:line-no %) min-lineno) :line] add-vn l)))
 
 (defn wrap-in-div [lang text]
   (str "<div class=\"p-" lang "\"><p>" text "</p></div>"))
@@ -81,75 +84,179 @@
   (let [lang (:lang l)
         pass1 (if (= lang "bo") (transform [:lines ALL :line] process-bo-text l) l)]
     (-> pass1
-        (attach-verse-number )
-         (handle-quotations )
-         (handle-verse)
-         (join-lines))))
+        (attach-verse-number)
+        (handle-quotations)
+        (handle-verse)
+        (join-lines))))
 
-(defn apply-class [ l class ]
+(defn apply-class [l class]
   (let [lang (:lang l)
-        text (first(select [:lines ALL :line ] l))]
-    (assoc l :text-out (str "<" class  " class=\"" class "-" (name lang) "\">" text "</" class">\n"))))
+        text (first (select [:lines ALL :line] l))]
+    (assoc l :text-out (str "<" class " class=\"" class "-" (name lang) "\">" text "</" class ">\n"))))
 
-(defn h1 [_ l]
+(defn h1 [l]
   (apply-class l "h1"))
 
-(defn h2 [style l]
-  (let [lang (:lang l)
-        text (first (select [:lines ALL :line] l))
-        textout (cond (and (= style :boeng-cols) (= lang ":english"))
-              (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h3-" (name lang) "\">" text "</h2>" "</div>\n") ;; h3-english works for two cols
-              (and (or (= style :boeng) (= style :bo)) (= lang "bo"))
-              (str row-tiny-image "<div><h2 id=\"" (str/trim text) "\" class=\"h2-" (name lang) "\">" text "</h2>" "</div>\n")
-              :else (str "<div><h2 class=\"h2-" (name lang) "\">" text "</h2>\n"))]
-    (assoc l :text-out textout)))
+(defn h2 [l]
+  (apply-class l "h2"))
 
-(defn h3 [_ l]
+(defn h3 [l]
   (apply-class l "h3"))
 
-(defn h5 [_ l]
+(defn h5 [l]
   (apply-class l "h5"))
 
 
 
-(defn verse [_ l]
+(defn verse [l]
   (let [lang (:lang l)
         text (process-text l)]
     text))
 
-(defn h4 [style l]
-  (verse style l)
-  )
+(defn h4 [l]
+  (verse l))
+
+
+(defn prepare-output [md]
+  (for [l md]
+    (if (= (:type l) :verse)
+      (verse l)
+      (apply-class l (name (:type l))))))
+
 
 (defn output-markdown [style md]
-        (for [l md]
-          (let [ftype (resolve (symbol (:type l)))
-                ;x (println "!" lang "!" type "!" text "!")
-                out (ftype style l)]
-            out)))
+  (for [l md]
+    (if (= (:type l) :verse)
+      (verse l)
+      (apply-class l (name (:type l))))))
 
 
 (defn output-div-pairs [md]
   (let [header (take-while #(= (:type %) :h1) md)
-        outputhead (reduce str(output-markdown :boeng-cols header))
+        outputhead (reduce str (output-markdown :boeng-cols header))
         body (drop (count header) md)
-        outputbody (loop  [[left right & rest] body output ""]
+        outputbody (loop [[left right & rest] body output ""]
                      (if (empty? left)
                        output
-                       (let [spans  (reduce str (doall (output-markdown :boeng-cols (into [] (list right left)))))
+                       (let [spans (reduce str (doall (output-markdown :boeng-cols (into [] (list right left)))))
                              div (str "<div class=\"verse\">" spans "</div>\n")]
                          (recur rest (str output div)))))]
     (str outputhead outputbody)))
 
+(defn interleave-chapter-text [source1-vn lang1 source2-vn lang2 headings1 heading2 source1 source2 book chapter]
+  (loop [s1 source1-vn s2 source2-vn h1 headings1 h2 heading2 output []]
+    (debug "A: " s1 s2 h1 h2)
+    (cond (and (empty? s1) (empty? s2))
+          output                                            ; exit loop
+          (or                                               ; s1 to be selected when no header is required and s1 <= s2
+            (and (not (empty? s1)) (not (empty? h1)) (not (empty? h2)) (and (not (<= (first h1) (first s1))) (not (<= (first h2) (first s1)))) (<= (first s1) (first s2)))
+            (and (empty? h1) (empty? h2) (not (empty? s1)) (<= (first s1) (first s2))))
+          (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
+                t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
+            (recur (rest s1) s2 h1 h2 (conj output t)))
+          ; s2 to be selected when no header is required and s1 <= s2
+          (and (empty? h1) (empty? h2) (empty? s1) (not (empty? s2)))
+          (let [x (debug "2: " s1 s2 h1 h2)
+                t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
+            (recur s1 (rest s2) h1 h2 (conj output t)))
+          (and (not (empty? s2)) (not (empty? h2)) (not (<= (first h2) (first s2))) (> (first s1) (first s2)))
+          (let [x (debug "2b: " s1 s2 h1 h2)
+                t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
+            (recur s1 (rest s2) h1 h2 (conj output t)))
+          (and (empty? h1) (empty? h2) (> (first s1) (first s2)))
+          (let [x (debug "2c: " s1 s2 h1 h2)
+                t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
+            (recur s1 (rest s2) h1 h2 (conj output t)))
+          (and (not (empty? h1)) (not (empty? s1)) (<= (first h1) (first s1)))
+          (let [x (debug "3: " s1 s2 h1 h2)
+                t (fetch-verse-heading conn "Himlit" book lang1 chapter (first h1))]
+            (recur s1 s2 (rest h1) h2 (conj output t)))
+          (and (not (empty? h2)) (not (empty? s1)) (<= (first h2) (first s1)))
+          (let [x (debug "4: " s1 s2 h1 h2)
+                t (fetch-verse-heading conn "Himlit" book lang2 chapter (first h2))]
+            (recur s1 s2 h1 (rest h2) (conj output t))))))
 
-(defn output-bo-markdown [md]
-  (output-markdown :bo (filter filter-markdown-for-bo md)))
+(comment
+  (fetch-verse-headings-verse-nos conn "Himlit" "Revelation" "bo" 2)
+  (fetch-verse-nos conn "Himlit" "Revelation" "english" "2")
+  (interleave-chapter-text '(1 2 3) "english" '(1 2 3) "bo" '(1) '(1) "WEB" "Himlit" "Revelation" 2),)
 
-(defn output-eng-markdown [md]
-  (output-markdown :eng (filter filter-markdown-for-eng md)))
+(defn get-text [md]
+  (select [ALL :text-out] (output-markdown nil md)))
 
-(defn output-boeng-markdown [md]
-  (output-markdown :boeng (filter filter-markdown-for-boeng md)))
+
+(defn get-chapter-text-interleaved [source1 lang1 source2 lang2 book chapter]
+  (let [source1-vn (fetch-verse-nos conn source1 book lang1 chapter)
+        source2-vn (fetch-verse-nos conn source2 book lang2 chapter)
+        heading-numbers1 (fetch-verse-headings-verse-nos conn "Himlit" book lang1 chapter)
+        heading-numbers2 (fetch-verse-headings-verse-nos conn "Himlit" book lang2 chapter)
+        text (get-text (flatten (interleave-chapter-text source1-vn lang1 source2-vn lang2 heading-numbers1 heading-numbers2 source1 source2 book chapter)))]
+    text))
+
+(defn get-book-interleaved [source1 lang1 source2 lang2 book]
+  (let [chapters (fetch-chapter-numbers conn source1 book lang1)
+        text (for [ch chapters]
+               (let [header (get-text (fetch-chapter-header conn "Himlit" book ch))
+                     chapter (get-chapter-text-interleaved source1 lang1 source2 lang2 book ch)]
+                 [row-tiny-image header chapter]))]
+    text))
+
+
+
+
+(defn get-book-text [source book language]
+  (let [chapters (fetch-chapter-numbers conn source book language)
+        text (for [ch chapters]
+               (let [header (get-text (fetch-chapter-header-lang conn "Himlit" book language ch))
+                     chapter (get-text (fetch-chapter conn source book language ch))]
+                 [row-tiny-image header chapter]))]
+    text))
+
+
+(defn output-bo-markdown [source book]
+  (let [header (get-text (select [ALL #(or (= (:type %) :h1) (and (= (:type %) :h5) (= (:lang %) "bo")))]
+                                 (fetch-header conn "Himlit" "Revelation")))
+        book-text (get-book-text source book "bo")]
+    (flatten [header book-text])))
+
+
+
+(defn output-eng-markdown [source book]
+  (let [header (get-text (select [ALL #(= (:lang %) "english")]
+                                 (fetch-header conn "Himlit" "Revelation")))
+        book-text (get-book-text source book "english")]
+    (flatten [header book-text])))
+
+(comment
+  (output-eng-markdown "WEB" "Revelation"),)
+
+(defn output-diglot-markdown [source1 lang1 source2 lang2 book]
+  (let [header (get-text (interleave (fetch-header-lang conn "Himlit" book lang1) (fetch-header-lang conn "Himlit" book lang2)))
+        book-text (get-book-interleaved source1 lang1 source2 lang2 book)]
+    (flatten [header book-text])))
+
+(defn output-boeng-markdown [book]
+  (let [source "Himlit"
+        lang1 "bo"
+        lang2 "english"
+        header (get-text (interleave (fetch-header-lang conn "Himlit" book lang1) (fetch-header-lang conn "Himlit" book lang2)))
+        book-text (get-book-interleaved source lang1 source lang2 book)]
+    (flatten [header book-text])))
+
+
+(comment
+  (def a (fetch-header-lang conn "Himlit" "Revelation" "english"))
+  (def b (fetch-header-lang conn "Himlit" "Revelation" "bo"))
+
+  (output-boeng-markdown "Himlit" "english" "WEB" "english" "Revelation")
+  (output-boeng-markdown "Himlit" "bo" "WEB" "english" "Revelation")
+  (output-boeng-markdown "WEB" "english" "Himlit" "bo" "Revelation")
+
+  (get-text (flatten (get-chapter-text-interleaved "Himlit" "bo" "WEB" "english" "Revelation" 1)))
+  (get-book-interleaved "Himlit" "bo" "WEB" "english" "Revelation")
+  (get-book-text "WEB" "Revelation" "english")
+  (fetch-chapter conn "WEB" "Revelation" "english" 1)
+  ())
 
 (defn output-boeng-interlinear [md]
   (output-div-pairs (filter filter-markdown-for-boeng md)))
@@ -159,3 +266,7 @@
 ;pandoc -s .\ProcessJames.md -c .\resources\css\main.css --metadata title="James" -o ProcessJamesBo.html
 
 ;C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s "James.out.md" -A .\resources\html\footer.html -c .\resources\css\main.css    -o "James.html"
+
+(comment
+  (prepare-output (fetch-verse conn "Himlit" "Revelation" "bo" 7 6))
+  (prepare-output (fetch-header conn "Himlit" "Revelation" "english")),)
