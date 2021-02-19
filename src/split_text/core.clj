@@ -212,6 +212,7 @@
   (def outputfile (construct-filename dir  pre-published filein (str "-" "uniglot" ".html")))
   (def outputengfile (construct-filename dir  pre-published filein (str "-" "english" ".html")))
   (def outputdigfile (construct-filename dir  pre-published filein (str "-" "diglot" ".html")))
+  (def mdout (output-md (output-bo-markdown "Himlit" "Revelation") intermediatefilename))
   (sh/sh "md2out.bat" intermediatefilename outputfile  "Revelation" stylesheet)
   (sh/sh "md2out.bat" intermediateengfilename outputengfile  "Revelation" stylesheet)
 
@@ -222,12 +223,6 @@
 
 
 
-  (loop [  [one two & remaining] m  o []]
-    (println one two remaining o)
-    (cond (and (= (:t one) :a) (= (:t two) :b) (recur ((comp vec flatten conj) [] [] (assoc one :t1 [(:t one) (:t two)]) (flatten remaining)) o))
-          (and (nil? one) (nil? two)) o
-          (nil? two) (let [n (assoc one :t1 [(:t one)])] (recur two (conj o n)))
-          :else (let [n (if (not (contains? one :t1)) (assoc one :t1 [(:t one)]) one)](recur ((comp vec flatten conj) [] [] two remaining) (conj  o n)))))
   ,)
 
 ; (-main "-f" "James.doc" "boeng-cols")

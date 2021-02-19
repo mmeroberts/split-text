@@ -29,10 +29,10 @@
 (def sentence-she-bracket-format "$1&emsp;")
 (def sentence-colon-format "$1&ensp;")
 (def ignore-quotations? false)
-(def print_debug? false)
+(def print_debug? true)
 (defn debug [& more]
   (if print_debug?
-    (apply prn more)))
+    (tap> more)))
 
 (def split-verse-normal #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+)*)")
 (def split-verse-24 #"((?:[-0-9]+)(\D+|[0-9]+,000|[0-9]+,[0-9]+|[0-9]{3}|[0-9]\:[\-0-9]+|24)*)")

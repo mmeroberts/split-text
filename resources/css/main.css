@@ -16,8 +16,10 @@
 body {
     margin-left: 10%;
     margin-right: 10%;
+    border: none;
     /*overflow-wrap: break-word;*/
 }
+
 
 ol {
     padding: 0;
@@ -88,6 +90,8 @@ ol {
 }
 .v-bo {
     font-size: 18pt;
+    margin-block-start: 1em !important;
+    margin-block-end: 0 !important;
 }
 .nameHighlight {
     color: orangered;
@@ -95,10 +99,16 @@ ol {
 .vq-bo {
     font-size: 18pt;
     padding-left: 50px;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
 }
 .vq-english {
     font-size: 12pt;
     padding-left: 50px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 .v-english {
     font-size: 12pt;
@@ -171,7 +181,9 @@ h5 {
 }
 p {
     font-size: 15pt;
-    margin-top:  1em;
+    margin-top:  0;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
 }
 span.underline {
     color: blue;
@@ -192,10 +204,19 @@ span.bo-ref {
     height: 30px;
 }
 
-/*.p-bo {*/
-/*    width: 50%;*/
-/*    overflow: hidden;*/
-/*}*/
+.p-bo {
+    font-size: 15pt;
+    margin-top:  0;
+    margin-block-start: 1em !important;
+    margin-block-end: 0 !important;
+}
+
+.pq-bo {
+    font-size: 15pt;
+    margin-top:  0;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
+}
 
 /*.p-english {*/
 /*    padding-left: 60%;*/
@@ -213,6 +234,8 @@ span.bo-ref {
 
     /*border: 3px solid #00AF50;*/
     padding: 0px;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
 }
 
 .verse .q-bo {
@@ -223,6 +246,8 @@ span.bo-ref {
 }
 .q-bo {
     margin: 0;
+    margin-block-start: 0 !important;
+    margin-block-end: 0 !important;
 }
 
 .q-english p {
