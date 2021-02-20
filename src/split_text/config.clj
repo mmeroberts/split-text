@@ -29,7 +29,7 @@
 (def sentence-she-bracket-format "$1&emsp;")
 (def sentence-colon-format "$1&ensp;")
 (def ignore-quotations? false)
-(def print_debug? true)
+(def print_debug? false)
 (defn debug [& more]
   (if print_debug?
     (tap> more)))

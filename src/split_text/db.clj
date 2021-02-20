@@ -148,7 +148,6 @@
 
 
 
-
 (defn fetch-header-lang [conn source book language]
   (let [chapter 1
         verse 0
@@ -311,6 +310,17 @@
                      :args [{ '?lang language '?book book '?source source '?chapter chapter-in}]})]
     (sort(mapv #(String->Number (first(str/split % #"\-+"))) (set(map second results))))))
 
+(defn fetch-books [conn source]
+  (let [
+        results   (crux/q
+                    (crux/db conn)
+                    {:find '[?book ?lang]
+                     :where '[[?entry :lang ?lang]
+                              [?entry :book ?book]
+                              [?entry :source ?source]                              ]
+                     :args [{ '?source source}]})]
+    results))
+
 
 
 (comment
@@ -326,15 +336,15 @@
      :args [{ '?lang language '?book book '?source source}]})
 
   (transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
-
+  (fetch-books conn "WEB")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
   (fetch-verse-numbers conn "Himlit" "Revelation" "english" "2")
   (fetch-verse-numbers conn "WEB" "Revelation" "english" "2")
-  (fetch-verse-nos conn "Himlit" "Revelation" "english" "2")
+  (count(fetch-verse-nos conn "Himlit" "Revelation" "english" "2"))
   (fetch-verse-nos conn "WEB" "Revelation" "english" "2")
   (fetch-chapter conn "Himlit" "Revelation" "english" "1")
   (fetch-chapter conn "Himlit" "Revelation" "bo" "1")
-  (fetch-chapter conn "Himlit" "Revelation" "bo" 1)
+  (count(fetch-chapter conn "Himlit" "Revelation" "english" 2))
   (fetch-chapter-no conn "Himlit" "Revelation" "bo")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "bo" "22")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "english" "22")

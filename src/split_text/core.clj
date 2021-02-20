@@ -213,9 +213,11 @@
   (def outputengfile (construct-filename dir  pre-published filein (str "-" "english" ".html")))
   (def outputdigfile (construct-filename dir  pre-published filein (str "-" "diglot" ".html")))
   (def mdout (output-md (output-bo-markdown "Himlit" "Revelation") intermediatefilename))
+  (def mdouteng (output-md (output-eng-markdown "Himlit" "Revelation") intermediateengfilename))
+  (def mdouteng (output-md (output-eng-markdown "WEB" "Revelation") intermediateengfilename))
   (sh/sh "md2out.bat" intermediatefilename outputfile  "Revelation" stylesheet)
   (sh/sh "md2out.bat" intermediateengfilename outputengfile  "Revelation" stylesheet)
-
+  (def mdoutint (output-md (output-boweb-markdown "Revelation") intermediateintfilename))
   (def mdoutint (output-md (output-boeng-markdown "Revelation") intermediateintfilename))
   (sh/sh "md2out.bat" intermediateintfilename outputdigfile  "Revelation" stylesheet)
 

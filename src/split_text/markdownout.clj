@@ -145,55 +145,37 @@
                          (recur rest (str output div)))))]
     (str outputhead outputbody)))
 
+
+
 (defn interleave-chapter-text [source1-vn lang1 source2-vn lang2 headings1 heading2 source1 source2 book chapter]
   (loop [s1 source1-vn s2 source2-vn h1 headings1 h2 heading2 output []]
-      (debug "A: " s1 s2 h1 h2)
+    (let [f (fn [x] (if (empty? x) 999 (first x)))
+          S1 (f s1)
+          S2 (f s2)
+          H1 (f h1)
+          H2 (f h2)]
+      (debug "A: " H1 H2 S1 S2)
+      (let [])
       (cond (and (empty? s1) (empty? s2))
             ;; exit loop
             output
-            (and (not (empty? s1)) (not (empty? h1)) (not (empty? h2))
-                 (and (not (<= (first h1) (first s1))) (not (<= (first h2) (first s1))))
-                 (<= (first s1) (first s2)))
-            ;; h1 and h2 greater or missing and s1 <= s2
-            (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
-                  t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
-              (recur (rest s1) s2 h1 h2 (conj output t)))
-            (and (empty? h1) (empty? h2) (not (empty? s1)) (not (empty? s2)) (<= (first s1) (first s2)))
-            ;; h1 and h2 missing and s1 <= s2
-            (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
-                  t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
-              (recur (rest s1) s2 h1 h2 (conj output t)))
-            (and (empty? h1) (empty? h2) (not (empty? s1)) (empty? s2))
-            ;; h1, h2 and s2 missing so must be s1
-            (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
-                  t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
-              (recur (rest s1) s2 h1 h2 (conj output t)))
-            (and (empty? h1) (empty? h2) (empty? s1) (not (empty? s2)))
-            ;; h1 and h2 and s1 missing so s2
-            (let [x (debug "2: " s1 s2 h1 h2)
-                  t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
-              (recur s1 (rest s2) h1 h2 (conj output t)))
-            (and (not (empty? s2)) (not (empty? h2)) (not (<= (first h2) (first s2)))
-                 (> (first s1) (first s2)))
-            ;; h2 <= s2 so s2
-            (let [x (debug "2: " s1 s2 h1 h2)
-                  t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
-              (recur s1 (rest s2) h1 h2 (conj output t)))
-            (and (empty? h1) (empty? h2) (> (first s1) (first s2)))
-            ;; h1 and h2 missing and s2 <= s1
-            (let [x (debug "2: " s1 s2 h1 h2)
-                  t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
-              (recur s1 (rest s2) h1 h2 (conj output t)))
-            (and (not (empty? h1)) (not (empty? s1)) (<= (first h1) (first s1)))
-            ;; h1 applies as <= s1
+            (<= H1 H2 S1 S2)
             (let [x (debug "3: " s1 s2 h1 h2)
                   t (fetch-verse-heading conn "Himlit" book lang1 chapter (first h1))]
               (recur s1 s2 (rest h1) h2 (conj output t)))
-            (and (not (empty? h2)) (not (empty? s1)) (<= (first h2) (first s1)))
-            ;; h2 <= s1
+            (<= H2 S1 S2)
             (let [x (debug "4: " s1 s2 h1 h2)
                   t (fetch-verse-heading conn "Himlit" book lang2 chapter (first h2))]
-              (recur s1 s2 h1 (rest h2) (conj output t))))))
+              (recur s1 s2 h1 (rest h2) (conj output t)))
+            (<= S1 S2)
+            (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
+                  t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
+              (recur (rest s1) s2 h1 h2 (conj output t)))
+            :else
+            (let [x (debug "2: " s1 s2 h1 h2)
+                  t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
+              (recur s1 (rest s2) h1 h2 (conj output t)))))))
+
 
 
 (comment
@@ -203,6 +185,7 @@
   (> (first nil) (first [1]))
   (> nil 1)
   (if  1 2)
+  (<= 1 3 4 5)
   ,)
 
 (defn get-text [md]
@@ -262,10 +245,15 @@
 (defn output-boeng-markdown [book]
   (let [source "Himlit"
         lang1 "bo"
-        lang2 "english"
-        header (get-text (interleave (fetch-header-lang conn "Himlit" book lang1) (fetch-header-lang conn "Himlit" book lang2)))
-        book-text (get-book-interleaved source lang1 source lang2 book)]
-    (flatten [header book-text])))
+        lang2 "english"]
+    (output-diglot-markdown source lang1 source lang2 book)))
+
+(defn output-boweb-markdown [book]
+  (let [source1 "Himlit"
+        source2 "WEB"
+        lang1 "bo"
+        lang2 "english"]
+    (output-diglot-markdown source1 lang1 source2 lang2 book)))
 
 
 (comment
