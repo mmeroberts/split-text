@@ -2,6 +2,7 @@
   (:require
     [split-text.config :refer :all]
     [split-text.db :refer :all]
+    [split-text.css :refer :all]
     [clojure.string :as str]
     [split-text.io :refer :all]
     [com.rpl.specter :refer :all]))
@@ -96,19 +97,6 @@
         text (first (select [:lines ALL :line] l))]
     (assoc l :text-out (str "<" class " class=\"" class "-" (name lang) "\">" text "</" class ">\n"))))
 
-(defn h1 [l]
-  (apply-class l "h1"))
-
-(defn h2 [l]
-  (apply-class l "h2"))
-
-(defn h3 [l]
-  (apply-class l "h3"))
-
-(defn h5 [l]
-  (apply-class l "h5"))
-
-
 
 (defn verse [l]
   (let [lang (:lang l)
@@ -119,14 +107,10 @@
   (verse l))
 
 
-(defn prepare-output [md]
-  (for [l md]
-    (if (= (:type l) :verse)
-      (verse l)
-      (apply-class l (name (:type l))))))
 
 
 (defn output-markdown [style md]
+  ;(debug "om: "(first md))
   (for [l md]
     (if (= (:type l) :verse)
       (verse l)
@@ -147,66 +131,165 @@
 
 
 
-(defn interleave-chapter-text [source1-vn lang1 source2-vn lang2 headings1 heading2 source1 source2 book chapter]
-  (loop [s1 source1-vn s2 source2-vn h1 headings1 h2 heading2 output []]
-    (let [f (fn [x] (if (empty? x) 999 (first x)))
-          S1 (f s1)
-          S2 (f s2)
-          H1 (f h1)
-          H2 (f h2)]
-      (debug "A: " H1 H2 S1 S2)
-      (let [])
-      (cond (and (empty? s1) (empty? s2))
-            ;; exit loop
-            output
-            (<= H1 H2 S1 S2)
-            (let [x (debug "3: " s1 s2 h1 h2)
-                  t (fetch-verse-heading conn "Himlit" book lang1 chapter (first h1))]
-              (recur s1 s2 (rest h1) h2 (conj output t)))
-            (<= H2 S1 S2)
-            (let [x (debug "4: " s1 s2 h1 h2)
-                  t (fetch-verse-heading conn "Himlit" book lang2 chapter (first h2))]
-              (recur s1 s2 h1 (rest h2) (conj output t)))
-            (<= S1 S2)
-            (let [x (debug "1: " (first s1) (first s2) (first h1) (first h2))
-                  t (fetch-verse-by-nos conn source1 book lang1 chapter (first s1))]
-              (recur (rest s1) s2 h1 h2 (conj output t)))
-            :else
-            (let [x (debug "2: " s1 s2 h1 h2)
-                  t (fetch-verse-by-nos conn source2 book lang2 chapter (first s2))]
-              (recur s1 (rest s2) h1 h2 (conj output t)))))))
+(defn interleave-chapter-items [source-text]
+  (let [source1-vn (select [ALL :verse-nos FIRST] (:s1 source-text))
+        source2-vn (select [ALL :verse-nos FIRST] (:s2 source-text))
+        heading-numbers1 (select [ALL :verse-nos FIRST] (:h1 source-text))
+        heading-numbers2 (select [ALL :verse-nos FIRST] (:h2 source-text))]
+    (loop [s1 source1-vn s2 source2-vn h1 heading-numbers1 h2 heading-numbers2 output []]
+      (let [f (fn [x] (if (empty? x) 999 (first x)))
+            S1 (f s1)
+            S2 (f s2)
+            H1 (f h1)
+            H2 (f h2)]
+        (debug "A: " H1 H2 S1 S2)
+        (cond (and (empty? s1) (empty? s2))
+              ;; exit loop
+              output
+              (<= H1 H2 S1 S2)
+              (let [;x (debug "3: " H1 H2 S1 S2)
+                    t [:h1 H1]]
+                (recur s1 s2 (rest h1) h2 (conj output t)))
+              (<= H2 S1 S2)
+              (let [;x (debug "4: " H1 H2 S1 S2)
+                    t [:h2 H2]]
+                (recur s1 s2 h1 (rest h2) (conj output t)))
+              (<= S1 S2)
+              (let [;x (debug "1: " H1 H2 S1 S2)
+                    t [:s1 S1]]
+                (recur (rest s1) s2 h1 h2 (conj output t)))
+              :else
+              (let [;x (debug "2: " H1 H2 S1 S2)
+                    t [:s2 S2]]
+                (recur s1 (rest s2) h1 h2 (conj output t))))))))
+
+#_(comment
+    (count(fetch-verse-headings-verse-nos conn "Himlit" "Revelation" "bo" 2))
+    (fetch-verse-nos conn "Himlit" "Revelation" "english" "2")
+
+    (def S1 (fetch-chapter conn "Himlit" "Revelation" "bo" 2))
+    (def S2 (fetch-chapter conn "Himlit" "Revelation" "english" 2))
+    (def H1 (fetch-chapter-verse-headings conn "Himlit" "Revelation" "bo" 2))
+    (def H2 (fetch-chapter-verse-headings conn "Himlit" "Revelation" "bo" 2))
+    (def ch {:s1 S1 :s2 S2 :h1 H1 :h2 H2})
+    (interleave-chapter-items ch)
+    (select [ALL #(= (first (:verse-nos %)) 1)] (:s1 ch))
+    (select [ALL :verse-nos FIRST] (:h1 ch))
+    (:h1 ch)
+    (> (first nil) (first [1]))
+    (> nil 1)
+    (if  1 2)
+    (<= 1 3 4 5)
+    ,)
+
+(defn get-text [md]
+  (let [text (output-markdown nil md)]
+        ;x (debug "gt:" (first text))]
+    (select [ALL :text-out] text)))
+
+(defn order-source-text [items source_text]
+  (for [item items]
+    (select [ALL #(= (first (:verse-nos %)) (second item))] ((first item)  source_text))))
+
+(defn get-source-text [source1-book source2-book chapter]
+        {:s1 (select [ALL #(and (= (:chapter-no %) chapter) (= (:type %) :verse))] source1-book)
+         :s2 (select [ALL #(and (= (:chapter-no %) chapter) (= (:type %) :verse))] source2-book)
+         :h1 (select [ALL #(and (= (:chapter-no %) chapter) (= (:type %) :h3))] source1-book)
+         :h2 (select [ALL #(and (= (:chapter-no %) chapter) (= (:type %) :h3))] source2-book)})
+
+
+
+
+
+
+(defn get-chapter-text-interleaved [source1-book source2-book chapter]
+  (let [source-text (get-source-text source1-book source2-book chapter)
+        items (interleave-chapter-items source-text)
+        ordered_source_text (order-source-text items source-text)
+        text (get-text (flatten ordered_source_text))]
+    text))
+
+(defn get-book-interleaved [source1 lang1 source2 lang2 book]
+  (let [source1-book (fetch-book conn source1 book lang1)
+        source2-book (fetch-book conn source2 book lang2)
+        both-books (flatten [ source1-book source2-book])
+        chapters (sort(set(select [ALL :chapter-no] source1-book)))
+        text (for [ch chapters]
+               (let [header (get-text (select [ALL  #(and (= (:chapter-no %) ch) (= (:type %) :h2))] both-books))
+                     chapter (get-chapter-text-interleaved source1-book source2-book ch)]
+                 [row-tiny-image header chapter]))]
+    text))
+
+#_(defn handle-parallel-text [ source-text1 source-text2]
+    (let [left-text (get-text source-text1)
+          x (debug left-text)
+          right-text (get-text source-text2)
+          column1 (str column-div-open (reduce str (doall left-text)) div-close)
+          column2 (str column-div-open (reduce str (doall right-text)) div-close)]
+      (str "<div class=\"row\">" column1 column2 "</div>\n")))
+
+(defn handle-parallel-text [ items source-text]
+  (loop [[left right & rest] items output ""]
+    (if (empty? left)
+      output
+      (let [left-text (select [ALL #(= (first (:verse-nos %)) (second left))] ((first left) source-text))
+            right-text (select [ALL #(= (first (:verse-nos %)) (second right))] ((first right) source-text))
+            left-output (first (get-text left-text))
+            ;x (debug "row: " left-output)
+            right-output (first (get-text right-text))
+            div (str row-div-open column-div-open left-output div-close column-div-open right-output div-close div-close)]
+            ;x (debug "row: " div)]
+        (recur rest (str output div))))))
+
+
+#_(defn get-chapter-text-parallel[source1-book source2-book chapter]
+    (let [source-text1 (select [ALL #(and (= (:chapter-no %) chapter) (contains? #{:verse :h3} (:type %)))] source1-book)
+          source-text2 (select [ALL #(and (= (:chapter-no %) chapter) (contains? #{:verse :h3} (:type %)))] source2-book)
+          ordered_source_text (handle-parallel-text  source-text1 source-text2)]
+      ordered_source_text))
+
+(defn get-chapter-text-parallel [source1-book source2-book chapter]
+  (let [x (debug "CH: " chapter)
+        source-text (get-source-text source1-book source2-book chapter)
+        items (interleave-chapter-items source-text)
+        ordered_source_text (handle-parallel-text items source-text)]
+    ordered_source_text))
 
 
 
 (comment
-  (fetch-verse-headings-verse-nos conn "Himlit" "Revelation" "bo" 2)
-  (fetch-verse-nos conn "Himlit" "Revelation" "english" "2")
-  (interleave-chapter-text '(1 2 3) "english" '(1 2 3) "bo" '(1) '(1) "WEB" "Himlit" "Revelation" 2)
-  (> (first nil) (first [1]))
-  (> nil 1)
-  (if  1 2)
-  (<= 1 3 4 5)
+  (def x [{:x 1 :c 2} {:x 2 :c 3} {:x 3 :c 1}])
+  (select [ALL #(contains?  #{ 1 2} (:x %))] x)
   ,)
 
-(defn get-text [md]
-  (select [ALL :text-out] (output-markdown nil md)))
-
-
-(defn get-chapter-text-interleaved [source1 lang1 source2 lang2 book chapter]
-  (let [source1-vn (fetch-verse-nos conn source1 book lang1 chapter)
-        source2-vn (fetch-verse-nos conn source2 book lang2 chapter)
-        heading-numbers1 (fetch-verse-headings-verse-nos conn "Himlit" book lang1 chapter)
-        heading-numbers2 (fetch-verse-headings-verse-nos conn "Himlit" book lang2 chapter)
-        text (get-text (flatten (interleave-chapter-text source1-vn lang1 source2-vn lang2 heading-numbers1 heading-numbers2 source1 source2 book chapter)))]
-    text))
-
-(defn get-book-interleaved [source1 lang1 source2 lang2 book]
-  (let [chapters (fetch-chapter-numbers conn source1 book lang1)
+(defn get-book-parallel [source1 lang1 source2 lang2 book]
+  (let [source1-book (fetch-book conn source1 book lang1)
+        source2-book (fetch-book conn source2 book lang2)
+        both-books (flatten [ source1-book source2-book])
+        chapters (sort(set(select [ALL :chapter-no] source1-book)))
         text (for [ch chapters]
-               (let [header (get-text (fetch-chapter-header conn "Himlit" book ch))
-                     chapter (get-chapter-text-interleaved source1 lang1 source2 lang2 book ch)]
+               (let [x (debug ch)
+                     header (get-text (select [ALL  #(and (= (:chapter-no %) ch) (= (:type %) :h2))] both-books))
+                     chapter (get-chapter-text-parallel source1-book source2-book ch)]
                  [row-tiny-image header chapter]))]
     text))
+
+#_(comment
+    (def source1-book (fetch-book conn "Himlit" "Revelation" "bo"))
+    (def source2-book (fetch-book conn "Himlit" "Revelation" "english"))
+    (def both-books (flatten [ source1-book source2-book]))
+    (select [ALL  #(and (= (:chapter-no %) 2) (= (:type %) :h2)) :verse-number] both-books)
+    (select [ALL #(and (= (:chapter-no %) 22) (= (:type %) :h3)) :verse-number] source1-book)
+    (select [ALL  #(and (= (:chapter-no %) 22) (= (:type %) :h3))] both-books)
+    (get-text (select [ALL  #(and (= (:chapter-no %) 2) (= (:type %) :h3))] both-books))
+    (get-chapter-text-parallel source1-book source2-book 1)
+    (for [items split-text.core/it] [l])
+    (get-chapter-text-interleaved source1-book source2-book 22)
+    (get-text(flatten (get-chapter-text-parallel source1-book source2-book 1)))
+    (debug split-text.core/it)
+    (concat [[2]] [[3]])
+    ,)
+
 
 
 
@@ -218,6 +301,10 @@
                      chapter (get-text (fetch-chapter conn source book language ch))]
                  [row-tiny-image header chapter]))]
     text))
+
+(comment
+  (fetch-chapter-numbers conn "Himlit" "Revelation" "bo")
+  ,)
 
 
 (defn output-bo-markdown [source book]
@@ -238,8 +325,14 @@
   (output-eng-markdown "WEB" "Revelation"),)
 
 (defn output-diglot-markdown [source1 lang1 source2 lang2 book]
+  (debug "ODM: " source1 lang1 source2 lang2 book)
   (let [header (get-text (interleave (fetch-header-lang conn "Himlit" book lang1) (fetch-header-lang conn "Himlit" book lang2)))
         book-text (get-book-interleaved source1 lang1 source2 lang2 book)]
+    (flatten [header book-text])))
+
+(defn output-parallel-markdown [source1 lang1 source2 lang2 book]
+  (let [header (get-text (interleave (fetch-header-lang conn "Himlit" book lang1) (fetch-header-lang conn "Himlit" book lang2)))
+        book-text (get-book-parallel source1 lang1 source2 lang2 book)]
     (flatten [header book-text])))
 
 (defn output-boeng-markdown [book]
@@ -270,8 +363,11 @@
   (fetch-chapter conn "WEB" "Revelation" "english" 1)
   ())
 
-(defn output-boeng-interlinear [md]
-  (output-div-pairs (filter filter-markdown-for-boeng md)))
+(defn output-boeng-parallel [book]
+  (let [source "Himlit"
+        lang1 "bo"
+        lang2 "english"]
+    (output-parallel-markdown source lang1 source lang2 book)))
 
 
 ;; post processing
@@ -279,6 +375,3 @@
 
 ;C:\Users\MartinRoberts\AppData\Local\Pandoc\pandoc -s "James.out.md" -A .\resources\html\footer.html -c .\resources\css\main.css    -o "James.html"
 
-(comment
-  (prepare-output (fetch-verse conn "Himlit" "Revelation" "bo" 7 6))
-  (prepare-output (fetch-header conn "Himlit" "Revelation" "english")),)

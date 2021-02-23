@@ -1,6 +1,6 @@
 (ns split-text.io
   (:require [split-text.config :refer :all]
-
+            [split-text.css :refer :all]
             [clojure.pprint :as pprint]
             [hickory.core :as h]
             [clojure.data.json :as json]
@@ -80,6 +80,27 @@
 
 (defn output-md [content output-filename]
   (spit output-filename (str  (reduce str content) " " row-normal-image)))
+
+(defn get-html-header []
+  (let [header-open "<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"generator\" content=\"pandoc\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\" />\n  <title>2020-Revelation-Finalint.out</title>"
+        header-close "</head>"]
+    (str header-open main-css header-close)))
+
+
+
+
+(defn wrap-html [header content]
+  (str "<html>\n" header "<body>\n" content "</body>\n</html>"))
+
+(comment
+  (get-html-header)
+  ,)
+
+
+(defn output-html [ content output-filename]
+  (let [header (get-html-header)
+        html (wrap-html header (str  (reduce str content) " " row-normal-image))]
+    (spit output-filename html)))
 
 (defn output-md-with-navigation [content md style output-filename]
   (spit output-filename (add-navigation md style (str  (reduce str content) " " row-normal-image))))

@@ -214,6 +214,16 @@
                :args [{'?lang language '?book book '?source source}]}]
     (fetch conn query)))
 
+(defn fetch-book-verses [conn source book language]
+  (let [query {:find '[(eql/project ?entry [:index :book :source :chapter :verse-number  :chapter-no  :verse-nos :type :lang :lines])]
+               :where '[[?entry :chapter ?chpt]
+                        [?entry :lang ?lang]
+                        [?entry :book ?book]
+                        [?entry :source ?source]
+                        [?entry :type :verse]]
+               :args [{'?lang language '?book book '?source source}]}]
+    (fetch conn query)))
+
 (defn fetch-book-no-header [conn source book language]
     (let [full-book (fetch-book conn  source book language)
           header (fetch-header-lang conn  source book language)]
@@ -335,6 +345,9 @@
      :where '[[?entry :verse-nos ?chpt]]
      :args [{ '?lang language '?book book '?source source}]})
 
+  (crux/entity-history (crux/db conn) :Himlit/Revelation_english_642 :desc {:with-docs? true})
+
+
   (transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
   (fetch-books conn "WEB")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
@@ -354,7 +367,9 @@
   (fetch-chapter conn "Himlit" "Revelation" "english" "2")
   (fetch-chapter conn "WEB" "Revelation" "english" "7")
   (fetch-header conn "Himlit" "Revelation")
-  (fetch-book conn "Himlit" "Revelation" "english")
+  (time (def s(fetch-book conn "Himlit" "Revelation" "english")))
+  (select [ALL #(= (:type %) :h2)] s)
+  (sort(set(select [ALL :chapter-no] s)))
   (fetch-book-no-header conn "Himlit" "Revelation" "english")
   (fetch-chapter-verse-headings conn "Himlit" "Revelation" "english" "1")
   (fetch-verse-l conn "Himlit" "Revelation" "english" "1" "12")

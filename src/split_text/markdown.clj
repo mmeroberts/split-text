@@ -15,13 +15,17 @@
 
 
 (defn read-markdown [filename]
-  (line-seq(clojure.java.io/reader filename)))
+  (let [text (with-open [r (clojure.java.io/reader filename)]
+               (doall (line-seq (clojure.java.io/reader filename))))]
+    text))
+
+
 
 (defn reduce-split-lines [x y]
   (if  (= (last y) \[)
     (assoc x :partial (str/join ""  [(:partial x) y]))
     (if (= (second y) \\)
-      (assoc x :strings (into (:strings x)  (list(str/join "" [(:partial x) y]))) :partial nil)
+      (assoc x :strings (into (:strings x) (list(str/join "" [(:partial x) y]))) :partial nil)
       (assoc x :strings (into (:strings x) (list y)) :partial nil))))
 
 (defn merge-lines [ls]
@@ -175,6 +179,25 @@
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
 
+(defn handle-markdown-stars [l]
+  (let [l1 (str/replace l #"\\\*" "#")
+        l2 (str/replace l1 #"[*]" "")
+        l3 (str/replace l2 #"#" "\\\\*")]
+      l3))
+
+(comment
+  (str/replace "djdjd\\*djdj" #"\\\*" "#")
+  (str/replace "sjsjsj#*ssjsj" #"\*" "")
+  (str/replace "sjsjsj#ssjsj" #"#" "\\\\*")
+  (handle-markdown-stars "djdjd\\*djd*j")
+
+  ,)
+
+
+(defn remove-markdown-stars [md]
+  (vec(transform [ALL  :text] handle-markdown-stars md)))
+
+
 (defn handle-spaces-after-bo-brackets [l]
   (-> l
       (str/replace  #"(?:\s+)?(\(|\[)" "$1")
@@ -283,6 +306,7 @@
       (transform-underlines)
       (transform-heading-underlines)
       (transform-quotes)
+      (remove-markdown-stars)
       ;(mark-bo-lang-lines)
       (transform-joined-lines)
       (transform-verse-numbers)
