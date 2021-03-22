@@ -1,12 +1,10 @@
 (ns split-text.io
-  (:require [split-text.config :refer :all]
-            [split-text.css :refer :all]
+  (:require [split-text.config :as conf]
+            [split-text.css :as css]
             [clojure.pprint :as pprint]
-            [hickory.core :as h]
+            [clojure.java.io :as io]
             [clojure.data.json :as json]
-            [clojure.string :as str]
-
-            [clojure.data.json :as json]))
+            [clojure.string :as str]))
 
 (defn clean [text]
   (-> text
@@ -17,7 +15,7 @@
       (str/trim-newline)))
 
 (defn get-file [fn]
-  (clojure.java.io/file fn))
+  (io/file fn))
 
 (defn file-epoch [fn]
    (.lastModified (get-file fn)))
@@ -27,10 +25,6 @@
 
 (def lastModified (partial file-epoch))
 
-(defn as-hickory-read-file [filename]
-  (let [raw (clean (slurp filename))
-        parsed-doc (h/parse raw)]
-    (h/as-hickory parsed-doc)))
 
 (defn filter-chapter-bo-headings [l]
   ;(or
@@ -53,7 +47,7 @@
   (str
     "<div id=\"mySidenav\" class=\"sidenav\">"
     "<a href=\"javascript:void(0)\" class=\"closebtn\" onclick=\"closeNav()\">&times;</a>"
-    (if (= "boeng-nav" style)
+    (when (= "boeng-nav" style)
       (str "<a href=\"javascript:void(0)\" class=\"showTextEng\" onclick=\"showEnglish()\">Show English</a>"
            "<a href=\"javascript:void(0)\" class=\"hideTextEng\" onclick=\"hideEnglish()\">Hide English</a>"
            "<a href=\"javascript:void(0)\" class=\"showTextBo\" onclick=\"showBo()\">Show Tibetan</a>"
@@ -79,31 +73,26 @@
   (spit output-filename (with-out-str (json/write-str content))))
 
 (defn output-md [content output-filename]
-  (spit output-filename (str  (reduce str content) " " row-normal-image)))
+  (spit output-filename (str  (reduce str content) " " conf/row-normal-image)))
 
-(defn get-html-header []
-  (let [header-open "<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"generator\" content=\"pandoc\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\" />\n  <title>2020-Revelation-Finalint.out</title>"
+(defn get-html-header [title]
+  (let [header-open (str "<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"generator\" content=\"pandoc\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=yes\" />\n  <title>" title "</title>")
         header-close "</head>"]
-    (str header-open main-css header-close)))
-
-
-
+    (str header-open css/main-css header-close)))
 
 (defn wrap-html [header content]
   (str "<html>\n" header "<body>\n" content "</body>\n</html>"))
 
-(comment
-  (get-html-header)
-  ,)
 
+(defn get-html-output [content title]
+  (let [header (get-html-header title)]
+    (wrap-html header (str  (reduce str content) " " conf/row-normal-image))))
 
-(defn output-html [ content output-filename]
-  (let [header (get-html-header)
-        html (wrap-html header (str  (reduce str content) " " row-normal-image))]
-    (spit output-filename html)))
+(defn output-html [ content title output-filename]
+    (spit output-filename (get-html-output content title)))
 
 (defn output-md-with-navigation [content md style output-filename]
-  (spit output-filename (add-navigation md style (str  (reduce str content) " " row-normal-image))))
+  (spit output-filename (add-navigation md style (str  (reduce str content) " " conf/row-normal-image))))
 
 
 

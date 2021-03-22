@@ -1,38 +1,17 @@
 (ns split-text.db
   (:require    [clojure.string :as str]
-               [clojure.java.io :as io]
                [crux.api :as crux]
                [byte-streams :as bs]
                [byte-transforms :as bt]
                [clojure.set :as set]
-
-               [com.rpl.specter :refer :all]))
-
-
-
+               [clj-http.client :as cl]
+               [clojure.edn :as edn]
+               [com.rpl.specter :refer [select transform ALL ]]))
 
 (defn start-http-client [port]
- (crux/new-api-client (str "http://localhost:" port)))
+ (crux/new-api-client (str "http://192.168.1.73:" port)))
 
 (def conn (start-http-client 3000))
-
-
-;(defn add_entries [conn md book source]
-;  (for [e md]
-;    (let [initial-entry (select-keys e [:lang :type :index :verse-number :chapter :next-verse])
-;          line-ids (vec (for [i (range (count (:fulltext e)))] (d/tempid -1)))
-;          linesvec (vec (:fulltext e))
-;          y (println line-ids "," linesvec)
-;          lines (into [] (for [i (range (count (:fulltext e)))]
-;                          (let [id (nth line-ids i)
-;                                line (nth linesvec i)
-;                                lineno (first line)
-;                                text (last line)]
-;                            (assoc {} :db/id id :text/line-no lineno :text/line text))))
-;          entry (conj  {:db/id entry_id :book book :source source :lines line-ids} initial-entry)
-;          transaction (conj lines entry)]
-;      (d/transact conn transaction))))
-
 
 
 (defn encode [l]
@@ -45,14 +24,17 @@
   (let [n (Integer/parseInt  str)]
     (if (number? n) n nil)))
 
+
+
+
 (defn make-entry [source book  l]
   (let [index (:index l)
         bo (= (:lang l) :bo)
         lang (:lang l)
         id (keyword source (str book "_" (name lang) "_" index))
         type (if (= (:type l) :h4) :verse (:type l))
-        chapter (:chapter l)
-        chapter-no (String->Number chapter)
+        chapter (re-find #"\d+" (:chapter  l))
+        chapter-no (String->Number (re-find #"\d+" chapter))
         verse-number (cond (contains? l :next-verse) (:next-verse l)
                            (= type :h2) "1"
                            (nil? (:verse-number l)) "0"
@@ -67,7 +49,7 @@
                                lineno (first line)
                                text (last line)]
                            (assoc {} :line-no lineno :line (if bo (encode text) text)))))]
-    (assoc {} :crux.db/id id
+      (assoc {} :crux.db/id id
               :index index
               :source source
               :type type
@@ -79,13 +61,24 @@
               :verse-number verse-number
               :lines  lines)))
 
-(defn add_entries [conn source book md]
-  (let [firstpass (map #(make-entry source book %) md)
-        secondpass (map #(conj [] :crux.tx/put %) firstpass)]
-    ;(println secondpass)
-     (crux/submit-tx conn (vec secondpass))))
+(comment
+  (re-find #"\d+" "**9**")
+  ,)
 
-(defn fetch [conn query]
+;(defn add_entries [conn source book md]
+;  (let [firstpass (map #(make-entry source book %) md)
+;        secondpass (map #(conj [] :crux.tx/put %) firstpass)]
+;    (tap> secondpass)
+;     (crux/submit-tx conn (vec secondpass))))
+
+(defn add_entries [conn source book md]
+    (for [entry md]
+      (let [put [[:crux.tx/put entry]]
+            y (tap> entry)
+            x (tap> put)]
+        (crux/submit-tx conn (vec put)))))
+
+(defn fetch-by-connection [conn query]
   (let [ results  (crux/q
                     (crux/db conn)
                     query)
@@ -93,6 +86,27 @@
         ;response (if (= chapter "1") (filter (fn [x] (not= (:verse-number x) 0) decoded)) decoded)
 
     (sort-by :index (select [ALL ALL] decoded))))
+
+(defn fetch-by-http [conn query]
+  (let [resp (cl/post conn
+                      {
+                       :body               (str {:query query})
+                       :headers            {"X-Api-Version" "2"}
+                       :content-type       :edn
+                       :socket-timeout     1000             ;; in milliseconds
+                       :connection-timeout 1000             ;; in milliseconds
+                       :accept             :edn
+                       :as :edn})
+        x (println (:body resp))
+        results (edn/read-string (:body resp))
+        decoded  (transform  [ALL ALL #(= (:lang %) "bo") :lines ALL :line] decode results)]
+    (sort-by :index (select [ALL ALL] decoded))))
+
+(defn fetch [conn query]
+  (if (= (class conn) crux.remote_api_client.RemoteApiClient)
+    (fetch-by-connection conn query)
+    (fetch-by-http conn query)))
+
 
 
 (defn fetch-full-chapter [conn source book language chapter]
@@ -176,8 +190,9 @@
 (defn verse? [type]
   (or  (= type :verse) (= type :h4)))
 
-(defn fetch-verse-by-number [conn source book language chapter verse]
+(defn fetch-verse-by-number
   "by-number means using the :verse-number entry which is a string and can be of the format 18-19"
+  [conn source book language chapter verse]
   (let [chapter-in (if (string? chapter) chapter (str chapter))
         verse-in (if (string? verse) verse (str verse))
         query  {:find '[(eql/project ?entry [:index :book :source :chapter :verse-number :chapter-no  :verse-nos :type  :lang :lines])]
@@ -331,6 +346,16 @@
                      :args [{ '?source source}]})]
     results))
 
+(defn put-headings-in-web [book]
+  (let [chapters (fetch-chapter-numbers conn "Himlit" book "english")]
+    (for [ch chapters]
+      (let [headings (fetch-chapter-verse-headings conn "Himlit" book "english" ch)
+            x (tap> headings)
+            entries (map #(assoc % :crux.db/id (keyword "WEB" (str book "_english_" (System/currentTimeMillis)))
+                                   :source "WEB") headings)
+            transactions (map #(conj [] :crux.tx/put %) entries)]
+        (tap> (vec transactions))))))
+
 
 
 (comment
@@ -347,18 +372,28 @@
 
   (crux/entity-history (crux/db conn) :Himlit/Revelation_english_642 :desc {:with-docs? true})
 
-
-  (transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
+  (put-headings-in-web "Revelation")
+  ;(def conn "http://localhost:3000/_crux/query")
+  ;(transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
   (fetch-books conn "WEB")
+  (fetch-book conn "Himlit" "Mark" "bo")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
+  (fetch-chapter-numbers conn "Himlit" "Mark" "bo" )
+  (fetch-verse-numbers conn "Himlit" "Mark" "bo" "16")
   (fetch-verse-numbers conn "Himlit" "Revelation" "english" "2")
   (fetch-verse-numbers conn "WEB" "Revelation" "english" "2")
   (count(fetch-verse-nos conn "Himlit" "Revelation" "english" "2"))
   (fetch-verse-nos conn "WEB" "Revelation" "english" "2")
-  (fetch-chapter conn "Himlit" "Revelation" "english" "1")
   (fetch-chapter conn "Himlit" "Revelation" "bo" "1")
+  (def g (fetch-chapter conn "WEB" "Revelation" "english" "1"))
+  ;(def g (fetch-chapter conn "Himlit" "Revelation" "bo" "1"))
+  (int (first(first(select [ALL :lines ALL :line] g))))
+
+  (select [ALL #(= (:type %) :h3)] g)
+  (fetch-chapter conn "Himlit" "Revelation" "bo" "1")
+  (fetch-chapter conn "Himlit" "Mark" "bo" "1")
   (count(fetch-chapter conn "Himlit" "Revelation" "english" 2))
-  (fetch-chapter-no conn "Himlit" "Revelation" "bo")
+  (fetch-chapter-numbers conn "Himlit" "Revelation" "english")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "bo" "22")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "english" "22")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "english" 22)
@@ -371,53 +406,36 @@
   (select [ALL #(= (:type %) :h2)] s)
   (sort(set(select [ALL :chapter-no] s)))
   (fetch-book-no-header conn "Himlit" "Revelation" "english")
-  (fetch-chapter-verse-headings conn "Himlit" "Revelation" "english" "1")
-  (fetch-verse-l conn "Himlit" "Revelation" "english" "1" "12")
+  (fetch-chapter-verse-headings conn "Himlit" "Revelation" "english" 1)
+  (fetch-chapter-verse-headings conn "Himlit" "Mark" "bo" 1)
+  (fetch-chapter-verse-headings conn "WEB" "Revelation" "english" 1)
   (fetch-verse-heading conn "Himlit" "Revelation" "english" "1" "12")
-  (fetch-verse-heading conn "Himlit" "Revelation" "english" 1 12)
+  (fetch-verse-heading conn "Himlit" "Revelation" "bo" 1 12)
   (fetch-verse-headings-verse-nos conn "Himlit" "Revelation" "bo" 1 )
   (rest (fetch-verse-headings-verse-nos conn "Himlit" "Revelation" "bo" 1 ))
 
   (fetch-verse-headings conn "Himlit" "Revelation"  "1" "12")
   (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 2 18)
   (fetch-verse-by-number conn "Himlit" "Revelation" "english" 5 9)
-  (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 5 9)
+  (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 5 9 )
   (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 7 11)
   (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 21 17)
-  (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 18 24)
-  (fetch-verse-by-nos conn "WEB" "Revelation" "english" 2 9)
+  (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 1 1)
+  (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 2 9)
   (fetch-verse-by-number conn "Himlit" "Revelation" "bo" "2" "8-9")
-  (fetch-verse-by-number conn "WEB" "Revelation" "english" 18 24)
+  (fetch-verse-by-number conn "BSB" "Revelation" "english" 18 24)
 
   (def him2 (fetch-verse-nos conn "Himlit" "Revelation" "english" "2"))
   (def web2 (fetch-verse-nos conn "WEB" "Revelation" "english" "2"))
 
   (def bo1 (fetch-chapter conn "Himlit" "Revelation" "bo" "1"))
   (def eng1 (fetch-chapter conn "Himlit" "Revelation" "english" "1"))
-  (def engheadings (fetch-chapter-headings conn "Himlit" "Revelation" "english" "1"))
+
   (def eng2 (fetch-chapter conn "WEB" "Revelation" "english" "1"))
   (sort-by (juxt :chapter :verse-number) (conj bo1 eng1))
-  (sort-by (juxt :chapter :verse-number :type :lang ) (flatten (conj bo1 eng2 engheadings)))
-  (flatten (conj bo1 eng2 engheadings))
   (crux/entity (crux/db conn) :Himlit/Revelation_english_642)
   (crux/entity (crux/db conn) :web/Revelation_30846)
 
 
+  (select [ALL  :lines ALL :line] (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 5 9 ))
     ,)
-
-
-
-    ;
-    ;
-
-
-
-
-
-
-
-
-
-
-;;;;;;;; DB;;;;;;;;
-

@@ -1,5 +1,7 @@
 (ns split-text.css)
 
+
+
 (def main-css
   "
     <style>
@@ -210,7 +212,8 @@
                     text-decoration: none;
                     }
     span.bo-brackets {
-                      font-size: 12pt;
+                      font-family: 'Calibri', sans-serif;
+                      font-size: 10pt;
                       }
 
     span.bo-ref {
