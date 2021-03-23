@@ -10,6 +10,15 @@
     [clojure.java.shell :as sh])
   (:gen-class))
 
+(defn validate-reference [val]
+  (cond (= val "ALL") true ; ALL means ALL chapters
+        (re-find #"^\d*$" val) true ; digit means exact chapter number
+        (re-find #"\d+-\d+$" val) true ; indicates a set of chapters
+        ;(re-find #"\d+:\d+$" val) true ; indicates chaper:verse
+        :else false))
+
+
+
 
 
 (def cli-options
@@ -24,6 +33,9 @@
     :default "normal"
     :validate [#(contains? #{"normal" "parallel"} % ) "Must be either normal or parallel"]]
    ["-n" "--navigation" "Use navigation"]
+   ["-r" "--reference REF" "The format of the output document"
+    :default "ALL"
+    :validate [#(validate-reference % ) "Must ALL or chapter number or n-m for chapter range"]]
 
    ; :validate [#(str/ends-with? % ".doc") "Must be a Word .doc file"]]
    ;; A non-idempotent option (:default is applied first)
@@ -164,7 +176,7 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "back")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn" "bobsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "boeng")
   ;; output with navigation
   ;(-main "-f" "2020-Revelation-Final" "-n" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
   ;; output with format no navigation

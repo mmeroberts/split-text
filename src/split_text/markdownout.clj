@@ -283,7 +283,9 @@
 (defn get-book [layout source1 lang1 source2 lang2 book]
   (let [source1-book (get-one-book source1 book lang1)
         source2-book (get-one-book source2 book lang2)
-        chapters (sort(set(select [ALL :chapter-no] source1-book)))
+        chapters-in (sort(set(select [ALL :chapter-no] source1-book)))
+        ref (:reference @conf/config-atom)
+        chapters (conf/handle-reference chapters-in ref)
         text (for [ch chapters]
                (handle-chapter layout source1 lang1 source2 lang2 book source1-book source2-book ch))]
 
@@ -317,7 +319,9 @@
 
 
 (defn get-book-text [source book language]
-  (let [chapters (db/fetch-chapter-numbers db/conn source book language)
+  (let [chapters-in (db/fetch-chapter-numbers db/conn source book language)
+        ref (:reference @conf/config-atom)
+        chapters (conf/handle-reference chapters-in ref)
         text (for [ch chapters]
                (let [header (get-text (db/fetch-chapter-header-lang db/conn "Himlit" book language ch))
                      chapter (get-text (db/fetch-chapter db/conn source book language ch))]

@@ -4,6 +4,16 @@
 
 (def config-atom (atom {}))
 
+(defn handle-reference [ch ref]
+  (cond (= ref "ALL") ch
+        (re-find #"^\d+$" ref) [(Integer/parseInt ref)]
+        (re-find #"^\d+-\d+$" ref) (let [x (re-matches #"^(\d+)-(\d+)$" "1-3")
+                                         n (Integer/parseInt (second x))
+                                         m (inc(Integer/parseInt (last x)))]
+                                     (range n m))))
+
+
+
 (defn get-config [options]
   (let [{:keys [config]} options
         config-file (when (some? config) (edn/read-string(slurp config)))
