@@ -45,10 +45,12 @@
 (def name-highlight-h2  "$2")
 ;(def name-highlight  "{$2}")
 (def ignore-quotations? false)
-(def print_debug? false)
+(def print_debug? true)
 (defn debug [& more]
   (when print_debug?
-    (tap> (str more))))
+    (println (str more))))
+
+(debug "hello")
 
 (def row-div-open "<div class=\"row\">")
 (def div-close "</div>")

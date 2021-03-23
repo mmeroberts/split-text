@@ -324,7 +324,7 @@
         chapters (conf/handle-reference chapters-in ref)
         text (for [ch chapters]
                (let [header (get-text (db/fetch-chapter-header-lang db/conn "Himlit" book language ch))
-                     chapter (get-text (db/fetch-chapter db/conn source book language ch))]
+                     chapter (get-text (db/fetch-full-chapter db/conn source book language ch))]
                  [(conf/get-row-tiny-image (str "chapter-" ch)) header chapter]))]
     text))
 
@@ -337,6 +337,7 @@
     (flatten [header book-text])))
 
 (comment
+  (db/fetch-chapter-header-lang db/conn "Himlit" "Revelation" "bo" "2")
   (output-uniglot-markdown "Himlit" "bo" "Revelation")
   ,)
 
@@ -345,7 +346,9 @@
 
 (defn output-markdown [format source1 lang1 source2 lang2 book]
   (conf/debug "ODM: " source1 lang1 source2 lang2 book)
-  (let [header (get-text (interleave (db/fetch-header-lang db/conn "Himlit" book lang1) (db/fetch-header-lang db/conn "Himlit" book lang2)))
+  (let [header (get-text (sort-by :index (flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
+                                     (when (and (= source1 "Himlit") (= lang1 "bo")) (db/fetch-header-lang db/conn "Himlit" book "english"))
+                                     (db/fetch-header-lang db/conn source2 book lang2)))))
         book-text (get-book format source1 lang1 source2 lang2 book)]
     (flatten [header book-text])))
 

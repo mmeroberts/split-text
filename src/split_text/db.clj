@@ -116,8 +116,10 @@
                         [?entry :lang ?lang]
                         [?entry :book ?book]
                         [?entry :source ?source]
+                        [?entry :type ?type]
                         [?entry :verse-number ?verse]
-                        [(not= ?verse "0")]]
+                        [(not= ?verse "0")]
+                        [(not= ?type :h2)]]
                :args [{'?chpt chapter-in '?lang language '?book book '?source source}]}]
     (fetch conn query)))
 
@@ -165,7 +167,6 @@
 (defn fetch-header-lang [conn source book language]
   (let [chapter 1
         verse 0
-
         query  {:find '[(eql/project ?entry [:index :book :source :chapter :verse-number :chapter-no  :verse-nos :type  :lang :lines])]
                 :where '[[?entry :chapter-no ?chpt]
                          [?entry :lang ?lang]
@@ -375,8 +376,9 @@
   (put-headings-in-web "Revelation")
   ;(def conn "http://localhost:3000/_crux/query")
   ;(transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
-  (fetch-books conn "WEB")
-  (fetch-book conn "Himlit" "Mark" "bo")
+  (fetch-books conn "BSB")
+  (fetch-book conn "BSB" "Revelation" "english")
+  (fetch-header-lang conn "BSB" "Revelation" "english")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
   (fetch-chapter-numbers conn "Himlit" "Mark" "bo" )
   (fetch-verse-numbers conn "Himlit" "Mark" "bo" "16")
@@ -390,15 +392,15 @@
   (int (first(first(select [ALL :lines ALL :line] g))))
 
   (select [ALL #(= (:type %) :h3)] g)
-  (fetch-chapter conn "Himlit" "Revelation" "bo" "1")
-  (fetch-chapter conn "Himlit" "Mark" "bo" "1")
+  (fetch-full-chapter conn "Himlit" "Revelation" "bo" "1")
+  (fetch-full-chapter conn "WEB" "Mark" "english" "1")
   (count(fetch-chapter conn "Himlit" "Revelation" "english" 2))
   (fetch-chapter-numbers conn "Himlit" "Revelation" "english")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "bo" "22")
-  (fetch-chapter-header-lang conn "Himlit" "Revelation" "english" "22")
+  (fetch-chapter-header-lang conn "WEB" "Revelation" "english" "22")
   (fetch-chapter-header-lang conn "Himlit" "Revelation" "english" 22)
   (fetch-chapter-header conn "Himlit" "Revelation"  22)
-  (fetch-chapter conn "Himlit" "Revelation" "bo" "5")
+  (fetch-chapter conn "Himlit" "Revelation" "bo" "1")
   (fetch-chapter conn "Himlit" "Revelation" "english" "2")
   (fetch-chapter conn "WEB" "Revelation" "english" "7")
   (fetch-header conn "Himlit" "Revelation")
@@ -423,7 +425,7 @@
   (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 1 1)
   (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 2 9)
   (fetch-verse-by-number conn "Himlit" "Revelation" "bo" "2" "8-9")
-  (fetch-verse-by-number conn "BSB" "Revelation" "english" 18 24)
+  (fetch-verse-by-number conn "WEB" "Revelation" "english" 1 1)
 
   (def him2 (fetch-verse-nos conn "Himlit" "Revelation" "english" "2"))
   (def web2 (fetch-verse-nos conn "WEB" "Revelation" "english" "2"))

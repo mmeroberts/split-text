@@ -36,7 +36,10 @@
       (str/replace #"\\\]" "#")
       (str/replace #"(\[|\])" "")
       (str/replace #"@" "[")
-      (str/replace #"#" "]")))
+      (str/replace #"#" "]")
+      (str/replace #"_" "&ensp;")
+      (str/replace #"\*" "&ensp;")
+      (str/replace  #"(\{(.+?)\})" split-text.config/name-highlight-style)))
 
 
 (defn handle-wylie [text]

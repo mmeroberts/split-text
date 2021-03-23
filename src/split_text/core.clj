@@ -101,7 +101,7 @@
   (str  d "\\" s "\\" f e))
 
 (defn handle-document [ options]
-  (tap> (str options))
+  (conf/debug (str options))
   (let [{:keys [file book directory source]} (conf/get-config options)
         docfile (construct-filename directory  conf/original  file ".doc")
         docxfile (construct-filename directory  conf/intermediate  file ".docx")
@@ -121,26 +121,29 @@
 
 
 
-(defn get-suffix [suffix navigation format]
+(defn get-suffix [suffix navigation format reference]
   (let [nav (if (nil? navigation) "" "-nav")
-        form (if (= format "normal") "" (str "-" format))]
-    (str suffix nav form)))
+        form (if (= format "normal") "" (str "-" format))
+        ref (str "-chs-" reference)]
+    (str suffix nav form ref)))
 
 (defn output-document [style options]
   (tap> (str options))
-  (let [{:keys [file title book directory navigation format output]} (conf/get-config options)
-        suffix (cond (= style "bo")  (get-suffix "uniglot" navigation format)
-                     (= style "eng")  (get-suffix "english" navigation format)
-                     (= style "web")  (get-suffix "web" navigation format)
-                     (= style "bsb")  (get-suffix "bsb" navigation format)
-                     (= style "back")  (get-suffix "back" navigation format)
-                     (= style "bowy") (get-suffix "diglot-wylie" navigation format)
-                     (= style "boeng") (get-suffix "diglot" navigation format)
-                     (= style "boweb") (get-suffix "diglot-web" navigation format)
-                     (= style "bobsb") (get-suffix "diglot-bsb" navigation format)
-                     (= style "boback") (get-suffix "diglot-back" navigation format))
+  (let [{:keys [file title book directory navigation format output reference]} (conf/get-config options)
+        x (prn "$^" reference "$")
+        suffix (cond (= style "bo")  (get-suffix "uniglot" navigation format reference)
+                     (= style "eng")  (get-suffix "english" navigation format reference)
+                     (= style "web")  (get-suffix "web" navigation format reference)
+                     (= style "bsb")  (get-suffix "bsb" navigation format reference)
+                     (= style "back")  (get-suffix "back" navigation format reference)
+                     (= style "bowy") (get-suffix "diglot-wylie" navigation format reference)
+                     (= style "boeng") (get-suffix "diglot" navigation format reference)
+                     (= style "boweb") (get-suffix "diglot-web" navigation format reference)
+                     (= style "bobsb") (get-suffix "diglot-bsb" navigation format reference)
+                     (= style "boback") (get-suffix "diglot-back" navigation format reference))
         outputfile (construct-filename directory  conf/pre-published file (str "-" suffix "." output))
         title-out (str title "-" suffix)]
+    (conf/debug outputfile)
     (when (not= exit 0)
       (case style
         "bo" (spio/output-html (mdo/output-book book "Himlit" "bo" nil nil format) title-out outputfile)
@@ -165,6 +168,7 @@
 (comment
   ;(conf/get-config {:config "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn" :source "Himlit"})
   ;; read in
+  (conf/debug "hello")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn")
   ;(-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "-T")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
@@ -176,7 +180,7 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "back")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "boeng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo")
   ;; output with navigation
   ;(-main "-f" "2020-Revelation-Final" "-n" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
   ;; output with format no navigation

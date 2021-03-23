@@ -168,38 +168,40 @@
     (vec (transform [ALL #(= (:type %) :h4)] handle-h4-verse-number md)))
 
 (defn handle-sentence-spaces [l]
-  (-> l
-        ; space between normal sentances
-        (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\"|&quot;)?(?!$)(\s+)(?!$)" "$1$2&emsp;")
-        ; space after ga with she at start of next sentence
-        (str/replace  #"(\u0F0D)(\)|\])" "$1$2&emsp;")
-        ; space after ga with she at start of next sentence
-        (str/replace  #"(\u0F42)(\u0F0D)" "$1&emsp;$2")
-        ;  space after ga closing bracket with she at start of next sentence
-        (str/replace  #"(\u0F42)(\]|\))(\u0F0D)" "$1$2&emsp;$3")
-        ;  space after ga closing bracket with she at start of next sentence
-        (str/replace  #"(\u0F42)(\]|\)) (\u0F0D)" "$1$2&emsp;$3")
-        ;  space after ga opening bracket with she at start of next sentence
-        (str/replace  #"(\u0F42)(\[|\()(\u0F0D)" "$1&emsp;$2$3")
-        ;  space after ga opening bracket with no she at start of next sentence
-        (str/replace  #"(\u0F42)(\[|\()" "$1&emsp;$2")
-        ; space after She followed by bracket
-        (str/replace  #"(\u0F0D])" "$1&emsp;")
-        (str/replace  #"(\u0F0D\)) " "$1&emsp;")
-        ;remove colons after shed
-        (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&ensp;")
-        ; remove colons after ga at end of text
-        (str/replace  #"(ག|\u0F42):(.)?$" "$1")
-        ; remove colons after ga
-        (str/replace  #"(ག|\u0F42):(\s)?" "$1&ensp;།")
-        ; remove final colon
-        (str/replace  #":(\s)" "")
-        ; remove any stray spaces
-        (str/replace  #"(\s)" "")
-        ; replace &#xf0d; with she
-        (str/replace #"(\u0F0D|&#xf0d;)" "།")
-        ; replace ka entity
-        (str/replace #"\u0F42" "ག")))
+  (let [res (-> l
+                  ; space between normal sentances
+                  (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\"|&quot;)?(?!$)(\s+)(?!$)" "$1$2&emsp;")
+                  ; space after ga with she at start of next sentence
+                  (str/replace  #"(\u0F0D)(\)|\])" "$1$2&emsp;")
+                  ; space after ga with she at start of next sentence
+                  (str/replace  #"(\u0F42)(\u0F0D)" "$1&emsp;$2")
+                  ;  space after ga closing bracket with she at start of next sentence
+                  (str/replace  #"(\u0F42)(\]|\))(\u0F0D)" "$1$2&emsp;$3")
+                  ;  space after ga closing bracket with she at start of next sentence
+                  (str/replace  #"(\u0F42)(\]|\)) (\u0F0D)" "$1$2&emsp;$3")
+                  ;  space after ga opening bracket with she at start of next sentence
+                  (str/replace  #"(\u0F42)(\[|\()(\u0F0D)" "$1&emsp;$2$3")
+                  ;  space after ga opening bracket with no she at start of next sentence
+                  (str/replace  #"(\u0F42)(\[|\()" "$1&emsp;$2")
+                  ; space after She followed by bracket
+                  (str/replace  #"(\u0F0D])" "$1&emsp;")
+                  (str/replace  #"(\u0F0D\)) " "$1&emsp;")
+                  ;remove colons after shed
+                  (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&emsp;")
+                  ; remove colons after ga at end of text
+                  (str/replace  #"(ག|\u0F42):(.)?$" "$1")
+                  ; remove colons after ga
+                  (str/replace  #"(ག|\u0F42):(\s)?" "$1&emsp;།")
+                  ; remove final colon
+                  (str/replace  #":(\s)" "")
+                  ; remove any stray spaces
+                  (str/replace  #"(\s)" "")
+                  ; replace &#xf0d; with she
+                  (str/replace #"(\u0F0D|&#xf0d;)" "།")
+                  ; replace ka entity
+                  (str/replace #"\u0F42" "ག")
+                  (str/replace #"&emsp;&emsp;\u200A" "&emsp;"))]
+    res))
 
 (defn transform-sentence-space [md]
   (vec(transform [ALL #(= (:lang %) :bo) :text] handle-sentence-spaces md)))
@@ -347,8 +349,8 @@
             (allocate-h3-next-verse)
             (transform-h4-verse-number)
             (remove-dir-rtl)
-            (transform-sentence-space)
             (transform-spaces-after-bo-brackets)
+            (transform-sentence-space)
             (merge-quotations)))
     (do
       (tap> "No Verses")
@@ -374,8 +376,8 @@
       (let [md (process-markdown-2 v)
             dbmd (prepare-for-db source book k md)]
         (if (:Test @conf/config-atom)
-          (do (tap> "Testing")
-              (tap> (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out"))
+          (do (conf/debug "Testing")
+              (conf/debug (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out"))
               (spit (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out" ) (reduce str dbmd)))
           (let [transaction (db/add_entries db/conn source book dbmd)]
                (conf/debug transaction)

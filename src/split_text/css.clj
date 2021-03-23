@@ -53,7 +53,7 @@
 }
 
     .h1-english {
-                 font-size: x-large;
+                 font-size: large;
                  font-weight: bold;
                  text-align: center;
                  display: block;
@@ -79,7 +79,7 @@
             /*margin-bottom: 0; !* was 2em *!*/
             }
 
-    .h3-english {
+    .h3-wylie, .h3-english {
                  font-size: large;
                  font-weight: bold;
                  margin-block-start: 12px !important;
@@ -90,7 +90,7 @@
             /*display: block;*/
             }
     .h5-english {
-                 font-size: x-large;
+                 font-size: small;
                  font-weight: bold;
                  text-align: center;
                  margin-bottom: 2em;
@@ -114,7 +114,7 @@
            margin-block-end: 0 !important;
            }
     .nameHighlight {
-                    color: orangered;
+                    color: MediumBlue;
                     }
     .vq-bo {
             font-size: 18pt;
@@ -124,13 +124,13 @@
             margin-block-start: 0 !important;
             margin-block-end: 0 !important;
             }
-    .vq-english {
+    .vq-wylie, .vq-english {
                  font-size: 12pt;
                  padding-left: 50px;
                  margin-top: 0;
                  margin-bottom: 0;
                  }
-    .v-english {
+    .v-wylie, .v-english {
                 font-size: 12pt;
                 }
     .v-back {
@@ -194,7 +194,7 @@
         margin-block-end: 0 !important;
         }
     h5 {
-        font-size: 16pt;
+        font-size: 8pt;
         /*font-weight: bold;*/
         text-align: center;
         margin-bottom:  0;
