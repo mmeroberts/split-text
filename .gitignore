@@ -30,4 +30,10 @@ James-bo.html
 ~$James.doc
 .nrepl-port
 workspace.xml
+/.cpcache
 /.idea
+/data
+/texts
+
+/split-text.iml
+/split-text-1.iml

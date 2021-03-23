@@ -5,16 +5,20 @@
          hickory/hickory {:mvn/version "0.7.1"}
          com.rpl/specter {:mvn/version "1.1.3"}
          org.clojure/data.json {:mvn/version "1.0.0"}
-         clj-http {:mvn/version "3.10.1"}
+         clj-http/clj-http {:mvn/version "3.11.0"}
          hiccup {:mvn/version "2.0.0-alpha2"}
          org.clojure/tools.cli {:mvn/version "1.0.194"}
-         juxt/crux-http-client {:mvn/version "20.12-1.13.0-beta"}}
+         juxt/crux-http-client {:mvn/version "21.01-1.14.0-beta"}
+         clj-commons/byte-transforms {:mvn/version "0.1.35"}
+         org.rigpa.wylie/org.rigpa.wylie {:local/root "../JavaWylie/Wylie2.jar"}}
 
 
   :aliases {:deps
             {:extra-deps {org.clojure/tools.deps.alpha {:mvn/version "0.6.496"}}}
-            :test {:extra-paths ["test"]}
-            :repl {:extra-deps {vlaaad/reveal {:mvn/version "1.1.163"}}:main-opts ["-m" "vlaaad.reveal" "repl"]}}
+            :test {:extra-paths ["test"]
+                   :extra-deps {expectations/clojure-test {:mvn/version "1.2.1"}}}
+            :repl {:extra-deps {vlaaad/reveal {:mvn/version "1.3.196"}}}
+            :remote-repl {:extra-deps {vlaaad/remote-repl {:mvn/version "1.1"}}}}
   :mvn/repos {
               "central" {:url "https://repo1.maven.org/maven2/"}
               "clojars" {:url "https://repo.clojars.org/"}}}
