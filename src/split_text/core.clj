@@ -28,7 +28,8 @@
    ["-c" "--config CONFIG" "Config file name"]
    ["-t" "--title TITLE" "The Title of the document"]
    ["-s" "--source SOURCE" "Source of Document" :default "Himlit"]
-   ["-T" "--Test" "Test Dry Run"]
+   ["-T" "--Test" "Test Dry Run"
+    :default false]
    ["-F" "--format FORMAT" "The format of the output document"
     :default "normal"
     :validate [#(contains? #{"normal" "parallel"} % ) "Must be either normal or parallel"]]
@@ -103,6 +104,7 @@
 (defn handle-document [ options]
   (conf/debug (str options))
   (let [{:keys [file book directory source]} (conf/get-config options)
+        x (conf/debug (conf/get-config options))
         docfile (construct-filename directory  conf/original  file ".doc")
         docxfile (construct-filename directory  conf/intermediate  file ".docx")
         markdownfile (construct-filename directory  conf/intermediate  file ".in.md")
@@ -170,6 +172,7 @@
   ;; read in
   (conf/debug "hello")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn")
   ;(-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "-T")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
   ;(-main "-f" "Mark" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark" "-t" "Mark" "-s" "Himlit")
@@ -180,7 +183,8 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "back")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bobsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn" "bo")
   ;; output with navigation
   ;(-main "-f" "2020-Revelation-Final" "-n" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
   ;; output with format no navigation

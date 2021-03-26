@@ -32,7 +32,11 @@
 
 (defn filter-chapter-eng-headings [l]
   ;(or
-  (and (= (:lang l) :english) (contains? #{ :h2 } (:type l))))  ;(= (:type l) :h1)))
+  (and (contains? #{ :english  } (:lang l) ) (contains? #{ :h2 } (:type l))))  ;(= (:type l) :h1)))
+
+(defn filter-chapter-back-headings [l]
+  ;(or
+  (and (contains? #{:back } (:lang l) ) (contains? #{ :h2 } (:type l))))  ;(= (:type l) :h1)))
 
 (defn create-chapter-links [md]
   (let [b (filter filter-chapter-bo-headings md)

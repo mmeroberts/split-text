@@ -297,7 +297,10 @@
 
 
 (defn get-chapter-entries [md]
-  (filter spio/filter-chapter-eng-headings md))
+  (let [eng (filter spio/filter-chapter-eng-headings md)]
+    (conf/debug "ENG" eng)
+    (if (empty? eng) (filter spio/filter-chapter-back-headings md)
+                     eng)))
 
 (defn get-chapters [md]
  ( into {} (let [x (partition 2 (select [ALL (multi-path :index :text)] (get-chapter-entries md)))]
@@ -378,7 +381,7 @@
         (if (:Test @conf/config-atom)
           (do (conf/debug "Testing")
               (conf/debug (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out"))
-              (spit (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out" ) (reduce str dbmd)))
+              (spit (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out" ) (reduce str md)))
           (let [transaction (db/add_entries db/conn source book dbmd)]
                (conf/debug transaction)
                (nil? transaction)))))))

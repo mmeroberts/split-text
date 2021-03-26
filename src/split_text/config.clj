@@ -50,7 +50,7 @@
   (when print_debug?
     (println (str more))))
 
-(debug "hello")
+;(debug "hello")
 
 (def row-div-open "<div class=\"row\">")
 (def div-close "</div>")
