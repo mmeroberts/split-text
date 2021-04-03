@@ -2,6 +2,7 @@
   (:require
     [split-text.config :as conf]
     [split-text.db :as db]
+    [split-text.wylie :as wy]
     [clojure.string :as str]
     [clojure.java.io :as io]
     [com.rpl.specter :refer [select transform ALL FIRST multi-path]]
@@ -32,9 +33,11 @@
     (:strings new)))
 
 (defn split-verses [verstr]
-  (let [regex (if (str/includes? verstr "(24)") conf/split-verse-24 conf/split-verse-normal)
-        parts (select [ALL FIRST] (re-seq regex verstr))]
-    parts))
+  (if (:verse-numbers @conf/config-atom)
+    (let [regex (if (str/includes? verstr "(24)") conf/split-verse-24 conf/split-verse-normal)
+          parts (select [ALL FIRST] (re-seq regex verstr))]
+      parts)
+    verstr))
         ;;((?:[-0-9]+)\D+);;((?:[-0-9]+) (\D+|[0-9]+,000)*)
 
 (defn handle-text
@@ -77,12 +80,14 @@
 
 (defn classify-type [mt]
   (for [s mt]
-    (cond (str/starts-with? (:text s) "#####") (assoc s :type :h5 :text (subs (:text s) 5))
-          (str/starts-with? (:text s) "####") (assoc s :type :h4 :text (subs (:text s) 5))
-          (str/starts-with? (:text s) "###") (assoc s :type :h3 :text (subs (:text s) 3))
-          (str/starts-with? (:text s) "##") (assoc s :type :h2 :text (subs (:text s)  2))
-          (str/starts-with? (:text s) "#") (assoc s :type :h1 :text (subs (:text s)  1))
-          :else (assoc s :type :verse))))
+    (do (conf/debug s)
+        (cond (nil? s) s
+              (str/starts-with? (:text s) "#####") (assoc s :type :h5 :text (subs (:text s) 5))
+              (str/starts-with? (:text s) "####") (assoc s :type :h4 :text (subs (:text s) 5))
+              (str/starts-with? (:text s) "###") (assoc s :type :h3 :text (subs (:text s) 3))
+              (str/starts-with? (:text s) "##") (assoc s :type :h2 :text (subs (:text s) 2))
+              (str/starts-with? (:text s) "#") (assoc s :type :h1 :text (subs (:text s) 1))
+              :else (assoc s :type :verse)))))
 
 (defn index-lines [mt]
   (map-indexed (fn [idx itm] (assoc itm :index idx)) mt))
@@ -109,13 +114,23 @@
 
 (defn replace_underlines [l]
   (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
-        l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" split-text.config/name-highlight)
+        l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.underline\})" conf/name-highlight)
         l3 (str/replace (str/replace l2 #"\@" "\\[") #"\#" "\\]")]
     l3))
 (defn transform-underlines
   "replace the markdown format of underline into a set of highights for names"
   [md]
   (vec(transform [ALL #(or (= (:type %) :verse) (= (:type %) :h4)) :text] replace_underlines md)))
+
+(defn replace-smallcaps [l]
+  (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
+        l2 (str/replace l1 #"(\[([^\[].*?)\]\{\.smallcaps\})" conf/extra-format)
+        l3 (str/replace (str/replace l2 #"\@" "\\[") #"\#" "\\]")]
+    l3))
+(defn transform-smallcaps
+  "replace the markdown format of underline into a set of highights for names"
+  [md]
+  (vec(transform [ALL  :text] replace-smallcaps md)))
 
 (defn remove_underlines [l]
   (let [l1 (str/replace (str/replace l #"\\\[" "\\@") #"\\\]" "\\#")
@@ -343,6 +358,7 @@
     (do (tap> "verses")
         (-> md
             (transform-underlines)
+            (transform-smallcaps)
             (transform-heading-underlines)
             (transform-quotes)
             (remove-markdown-stars)
@@ -381,7 +397,20 @@
         (if (:Test @conf/config-atom)
           (do (conf/debug "Testing")
               (conf/debug (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out"))
-              (spit (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out" ) (reduce str md)))
+              (when (= k :bo)
+                (let [w-entries (wy/get-wylie-post-full-text md)
+                      w-dbmd (prepare-for-db source book :wylie w-entries)]
+                  (spit (str (:directory @conf/config-atom) "\\" book "_wylie.out" ) (reduce str w-dbmd))))
+              (spit (str (:directory @conf/config-atom) "\\" book "_" (name k) ".out" ) (reduce str dbmd)))
           (let [transaction (db/add_entries db/conn source book dbmd)]
                (conf/debug transaction)
+               (when (= k :bo)
+                 (do (conf/debug "inserting wylie")
+                     (let [w-entries (wy/get-wylie-post-full-text md)
+                           w-dbmd (prepare-for-db source book :wylie w-entries)
+                           w-transaction (db/add_entries db/conn source book w-dbmd)
+                           x (prn (first w-dbmd))]
+                       (prn w-transaction)
+                       (nil? w-transaction))))
+               (prn transaction)
                (nil? transaction)))))))

@@ -2,6 +2,7 @@
   (:require
     [split-text.io :as spio]
     ;[clojure.java.io :as io]
+    [com.rpl.specter :refer :all]
     [split-text.markdown :as md]
     [split-text.config :as conf]
     [split-text.markdownout :as mdo]
@@ -87,7 +88,7 @@
       ;; custom validation on arguments
 
       (and (= 1 (count arguments))
-           (#{"bo" "eng" "web" "bsb" "back" "bowy"  "bobsb" "boeng"  "boweb" "boback"} (first arguments)))
+           (#{"bo" "eng" "wy" "web" "bsb" "back" "bowy" "wyeng" "wybsb" "bobsb" "boeng"  "boweb" "boback"} (first arguments)))
       {:style (first arguments) :options options}
       (or (:title options) (:config options)) ; catch all check - titlemust be defined.
       {:options options}
@@ -135,13 +136,16 @@
         x (prn "$^" reference "$")
         suffix (cond (= style "bo")  (get-suffix "uniglot" navigation format reference)
                      (= style "eng")  (get-suffix "english" navigation format reference)
+                     (= style "wy")  (get-suffix "wylie" navigation format reference)
                      (= style "web")  (get-suffix "web" navigation format reference)
                      (= style "bsb")  (get-suffix "bsb" navigation format reference)
                      (= style "back")  (get-suffix "back" navigation format reference)
                      (= style "bowy") (get-suffix "diglot-wylie" navigation format reference)
+                     (= style "wyeng") (get-suffix "wylie-eng" navigation format reference)
                      (= style "boeng") (get-suffix "diglot" navigation format reference)
                      (= style "boweb") (get-suffix "diglot-web" navigation format reference)
                      (= style "bobsb") (get-suffix "diglot-bsb" navigation format reference)
+                     (= style "wybsb") (get-suffix "wylie-bsb" navigation format reference)
                      (= style "boback") (get-suffix "diglot-back" navigation format reference))
         outputfile (construct-filename directory  conf/pre-published file (str "-" suffix "." output))
         title-out (str title "-" suffix)]
@@ -150,13 +154,16 @@
       (case style
         "bo" (spio/output-html (mdo/output-book book "Himlit" "bo" nil nil format) title-out outputfile)
         "eng" (spio/output-html (mdo/output-book book "Himlit" "english" nil nil format) title-out outputfile)
+        "wy" (spio/output-html (mdo/output-book book "Himlit" "wylie" nil nil format) title-out outputfile)
         "web" (spio/output-html (mdo/output-book book "WEB" "english" nil nil format) title-out outputfile)
         "bsb" (spio/output-html (mdo/output-book book "BSB" "english" nil nil format) title-out outputfile)
         "back" (spio/output-html (mdo/output-book book "Himlit" "back" nil nil format) title-out outputfile)
         "bowy" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "wylie" format) title-out outputfile)
+        "wyeng" (spio/output-html (mdo/output-book book "Himlit" "wylie" "Himlit" "english" format) title-out outputfile)
         "boeng" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "english" format) title-out outputfile)
         "boweb" (spio/output-html (mdo/output-book book "Himlit" "bo" "WEB" "english" format) title-out outputfile)
         "bobsb" (spio/output-html (mdo/output-book book "Himlit" "bo" "BSB" "english" format) title-out outputfile)
+        "wybsb" (spio/output-html (mdo/output-book book "Himlit" "wylie" "BSB" "english" format) title-out outputfile)
         "boback" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "back" format) title-out outputfile)))))
 
 (defn -main [& args]
@@ -172,8 +179,11 @@
   ;; read in
   (conf/debug "hello")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\OT\\Genesis\\config\\config.edn")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn")
-  ;(-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "-T")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "-T")
+
+  (md/clean-markdown (md/read-markdown "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\_intermediate\\GoodNewsBook1.in.md"))
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation")
   ;(-main "-f" "Mark" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark" "-t" "Mark" "-s" "Himlit")
   ;; output
@@ -183,8 +193,12 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "back")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bobsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "eng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wybsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wyeng")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn" "bo")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "bo")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\OT\\Genesis\\config\\config.edn" "bo")
   ;; output with navigation
   ;(-main "-f" "2020-Revelation-Final" "-n" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "bo")
   ;; output with format no navigation

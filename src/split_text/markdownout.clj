@@ -273,10 +273,10 @@
 (defn get-one-book [source book lang]
   (if (not= lang "wylie")
     (db/fetch-book db/conn source book lang)
-    (wy/get-wylie-lines(db/fetch-book db/conn source book "bo"))))
+    (wy/get-wylie-post-lines(db/fetch-book db/conn source book "bo"))))
 
 (comment
-  (wy/get-wylie-lines(db/fetch-book db/conn "Himlit" "Revelation" "bo"))
+  (wy/get-wylie-post-lines(db/fetch-book db/conn "Himlit" "Revelation" "bo"))
         ,)
 
 
@@ -348,10 +348,26 @@
 (defn output-markdown [format source1 lang1 source2 lang2 book]
   (conf/debug "ODM: " source1 lang1 source2 lang2 book)
   (let [header (get-text (sort-by :index (flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
-                                                        (when (and (= source1 "Himlit") (= lang1 "bo")) (db/fetch-header-lang db/conn "Himlit" book "english"))
+                                                        (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1)) (db/fetch-header-lang db/conn "Himlit" book "english"))
                                                         (db/fetch-header-lang db/conn source2 book lang2)))))
         book-text (get-book format source1 lang1 source2 lang2 book)]
     (flatten [header book-text])))
+
+(comment
+  (get-book "normal" "Himlit" "wylie" "Himlit" "english" "Revelation")
+  (output-markdown "normal" "Himlit" "wylie" "Himlit" "english" "Revelation")
+  (def source1 "Himlit")
+  (def lang1 "wylie")
+  (def source2 "Himlit")
+  (def lang2 "english")
+  (def book "Revelation")
+  (get-text (sort-by :index (flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
+    (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1))
+      (db/fetch-header-lang db/conn "Himlit" book "english"))))))
+  (db/fetch-header-lang db/conn source1 book lang1)
+  (db/fetch-header-lang db/conn "Himlit" book "english")
+  (db/fetch-header-lang db/conn source2 book lang2)
+  ,)
 
 
 (defn output-book [book source1 lang1 source2 lang2 format]

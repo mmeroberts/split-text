@@ -1,6 +1,6 @@
 (ns split-text.wylie
   (:require [clojure.string :as str]
-            [com.rpl.specter :refer [transform ALL]])
+            [com.rpl.specter :refer [transform ALL MAP-VALS]])
   (:import org.rigpa.wylie.Wylie))
 
 (defn prepare-for-wylie
@@ -14,6 +14,16 @@
   "replace the spaces between senstences with emp entity"
   [l]
   (str/replace l #" " "&emsp;"))
+
+(defn to-raw-wylie [l]
+  (let [wl (Wylie.)
+        final (.toWylie wl l)]
+    final))
+
+(defn from-raw-wylie [l]
+  (let [wl (Wylie.)
+        final (.fromWylie wl l)]
+    final))
 
 
 (defn to-wylie [l]
@@ -42,16 +52,30 @@
       (str/replace  #"(\{(.+?)\})" split-text.config/name-highlight-style)))
 
 
-(defn handle-wylie [text]
+(defn handle-wylie-post [text]
   (let [wylie (to-wylie text)
         back (from-wylie wylie)
         post (post-process-wylie wylie)]
-    (when (not= (compare text back) 0) (println "failed:" text "#" wylie "#" back))
     post))
 
-(defn get-wylie-lines [entry]
-  (let [first (transform [ALL :lines ALL :line] handle-wylie entry)]
+(defn handle-wylie [text]
+  (let [wylie (to-raw-wylie text)
+        back (from-raw-wylie wylie)]
+    (when (not= (compare text back) 0) (println "failed:" text "#" wylie "#" back))
+    wylie))
+
+(defn get-wylie-post-lines [entry]
+  (let [first (transform [ALL :lines ALL :line] handle-wylie-post entry)]
     (transform [ALL :lang] (fn [x] "wylie") first)))
+
+(defn get-wylie-post-full-text [entry]
+  (let [first (transform [ALL :fulltext MAP-VALS]  handle-wylie-post entry)]
+    (transform [ALL :lang] (fn [x] "wylie") first)))
+
+
+
+
+
 
 
 (comment

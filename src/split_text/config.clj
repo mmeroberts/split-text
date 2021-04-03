@@ -43,6 +43,7 @@
 (def name-highlight-style  "<span class=\"nameHighlight\">$2</span>")
 (def name-highlight  "{$2}")
 (def name-highlight-h2  "$2")
+(def extra-format  "$2")
 ;(def name-highlight  "{$2}")
 (def ignore-quotations? false)
 (def print_debug? true)

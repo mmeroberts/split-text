@@ -1,5 +1,6 @@
 (ns split-text.db
-  (:require    [clojure.string :as str]
+  (:require    [split-text.config :as conf]
+               [clojure.string :as str]
                [crux.api :as crux]
                [byte-streams :as bs]
                [byte-transforms :as bt]
@@ -28,6 +29,7 @@
 
 
 (defn make-entry [source book  l]
+  (conf/debug l)
   (let [index (:index l)
         bo (= (:lang l) :bo)
         lang (:lang l)
@@ -347,6 +349,36 @@
                      :args [{ '?source source}]})]
     results))
 
+(defn fetch-all-books-by-lang [conn lang]
+  (let [
+        results   (crux/q
+                    (crux/db conn)
+                    {:find '[?source ?book ?lang]
+                     :where '[[?entry :lang ?lang]
+                              [?entry :book ?book]
+                              [?entry :source ?source]                              ]
+                     :args [{ '?lang lang}]})]
+    results))
+
+(defn fetch-all-books [conn]
+  (let [
+        results   (crux/q
+                    (crux/db conn)
+                    {:find '[?source ?book ?lang]
+                     :where '[[?entry :lang ?lang]
+                              [?entry :book ?book]
+                              [?entry :source ?source]]})]
+    results))
+
+(defn fetch-all-book-names [conn]
+  (let [
+        results   (crux/q
+                    (crux/db conn)
+                    {:find '[ ?book]
+                     :where '[[?entry :book ?book]
+                              [?entry :source ?source]]})]
+    results))
+
 (defn put-headings-in-web [book]
   (let [chapters (fetch-chapter-numbers conn "Himlit" book "english")]
     (for [ch chapters]
@@ -360,7 +392,9 @@
 
 
 (comment
-
+  (fetch-all-book-names conn)
+  (fetch-all-books conn)
+  (fetch-all-books-by-lang conn "bo")
   (def language "bo")
   (def source "Himlit")
   (def book "Revelation")
@@ -376,8 +410,9 @@
   (put-headings-in-web "Revelation")
   ;(def conn "http://localhost:3000/_crux/query")
   ;(transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
-  (fetch-books conn "BSB")
-  (fetch-book conn "BSB" "Revelation" "english")
+  (fetch-books conn "GoodNewsForYou")
+  (fetch-book conn "GoodNewsForYou" "Book1" "bo")
+  (fetch-book conn "Himlit" "Revelation" "wylie")
   (fetch-header-lang conn "BSB" "Revelation" "english")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
   (fetch-chapter-numbers conn "Himlit" "Mark" "bo" )
@@ -419,7 +454,7 @@
   (fetch-verse-headings conn "Himlit" "Revelation"  "1" "12")
   (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 2 18)
   (fetch-verse-by-number conn "Himlit" "Revelation" "english" 5 9)
-  (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 5 9 )
+  (fetch-verse-by-nos conn "Himlit" "Revelation" "wylie" 5 9 )
   (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 7 11)
   (fetch-verse-by-nos conn "Himlit" "Revelation" "english" 21 17)
   (fetch-verse-by-nos conn "Himlit" "Revelation" "bo" 1 1)
