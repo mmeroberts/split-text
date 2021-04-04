@@ -179,6 +179,7 @@
   ;; read in
   (conf/debug "hello")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Epistles\\2019-A2A-11-Epistles-only-James\\config\\config.edn")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\OT\\Genesis\\config\\config.edn")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "-T")
@@ -194,7 +195,7 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "eng")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wybsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bobsb")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wyeng")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn" "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "bo")

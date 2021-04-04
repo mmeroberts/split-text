@@ -347,9 +347,10 @@
 
 (defn output-markdown [format source1 lang1 source2 lang2 book]
   (conf/debug "ODM: " source1 lang1 source2 lang2 book)
-  (let [header (get-text (sort-by :index (flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
-                                                        (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1)) (db/fetch-header-lang db/conn "Himlit" book "english"))
-                                                        (db/fetch-header-lang db/conn source2 book lang2)))))
+  (let [header (get-text (sort-by :index (distinct(flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
+                                                        (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1))
+                                                          (db/fetch-header-lang db/conn "Himlit" book "english"))
+                                                        (db/fetch-header-lang db/conn source2 book lang2))))))
         book-text (get-book format source1 lang1 source2 lang2 book)]
     (flatten [header book-text])))
 
@@ -364,6 +365,10 @@
   (get-text (sort-by :index (flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
     (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1))
       (db/fetch-header-lang db/conn "Himlit" book "english"))))))
+  (get-text (sort-by :index (distinct(flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
+                                           (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1)) (db/fetch-header-lang db/conn "Himlit" book "english"))
+                                           (db/fetch-header-lang db/conn source2 book lang2))))))
+
   (db/fetch-header-lang db/conn source1 book lang1)
   (db/fetch-header-lang db/conn "Himlit" book "english")
   (db/fetch-header-lang db/conn source2 book lang2)

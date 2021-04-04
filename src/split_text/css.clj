@@ -52,7 +52,7 @@
 
 }
 
-    .h1-english {
+    .h1-english, .h1-wylie {
                  font-size: large;
                  font-weight: bold;
                  text-align: center;
@@ -64,7 +64,7 @@
              text-align: center;
              /*display: block;*/
              }
-    .h2-english {
+    .h2-english, .h2-wylie {
                  font-size: large;
                  font-weight: normal;
                  font-family: 'Calibri', sans-serif;
@@ -89,7 +89,7 @@
             font-weight: bold;
             /*display: block;*/
             }
-    .h5-english {
+    .h5-english , .h5-wylie{
                  font-size: small;
                  font-weight: bold;
                  text-align: center;
@@ -204,8 +204,7 @@
     p {
        font-size: 15pt;
        margin-top:  0;
-       margin-block-start: 0 !important;
-       margin-block-end: 0 !important;
+
        }
     span.underline {
                     color: blue;
@@ -231,7 +230,7 @@
            margin-block-start: 1em !important;
            margin-block-end: 0 !important;
            }
-     .p-english {
+     .p-english, .p-wylie {
            font-size: 15pt;
            margin-top:  0;
            margin-block-start: 1em !important;
