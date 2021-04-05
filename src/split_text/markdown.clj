@@ -185,28 +185,28 @@
 (defn handle-sentence-spaces [l]
   (let [res (-> l
                   ; space between normal sentances
-                  (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\"|&quot;)?(?!$)(\s+)(?!$)" "$1$2&emsp;")
+                  (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\"|&quot;)?(?!$)(\s+)(?!$)" "$1$2&ensp;")
                   ; space after ga with she at start of next sentence
-                  (str/replace  #"(\u0F0D)(\)|\])" "$1$2&emsp;")
+                  (str/replace  #"(\u0F0D)(\)|\])" "$1$2&ensp;")
                   ; space after ga with she at start of next sentence
-                  (str/replace  #"(\u0F42)(\u0F0D)" "$1&emsp;$2")
+                  (str/replace  #"(\u0F42)(\u0F0D)" "$1&ensp;$2")
                   ;  space after ga closing bracket with she at start of next sentence
-                  (str/replace  #"(\u0F42)(\]|\))(\u0F0D)" "$1$2&emsp;$3")
+                  (str/replace  #"(\u0F42)(\]|\))(\u0F0D)" "$1$2&ensp;$3")
                   ;  space after ga closing bracket with she at start of next sentence
-                  (str/replace  #"(\u0F42)(\]|\)) (\u0F0D)" "$1$2&emsp;$3")
+                  (str/replace  #"(\u0F42)(\]|\)) (\u0F0D)" "$1$2&ensp;$3")
                   ;  space after ga opening bracket with she at start of next sentence
-                  (str/replace  #"(\u0F42)(\[|\()(\u0F0D)" "$1&emsp;$2$3")
+                  (str/replace  #"(\u0F42)(\[|\()(\u0F0D)" "$1&ensp;$2$3")
                   ;  space after ga opening bracket with no she at start of next sentence
-                  (str/replace  #"(\u0F42)(\[|\()" "$1&emsp;$2")
+                  (str/replace  #"(\u0F42)(\[|\()" "$1&ensp;$2")
                   ; space after She followed by bracket
-                  (str/replace  #"(\u0F0D])" "$1&emsp;")
-                  (str/replace  #"(\u0F0D\)) " "$1&emsp;")
+                  (str/replace  #"(\u0F0D])" "$1&ensp;")
+                  (str/replace  #"(\u0F0D\)) " "$1&ensp;")
                   ;remove colons after shed
-                  (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&emsp;")
+                  (str/replace  #"(།|\u0F0D|&#xf0d;):" "$1&ensp;")
                   ; remove colons after ga at end of text
                   (str/replace  #"(ག|\u0F42):(.)?$" "$1")
                   ; remove colons after ga
-                  (str/replace  #"(ག|\u0F42):(\s)?" "$1&emsp;།")
+                  (str/replace  #"(ག|\u0F42):(\s)?" "$1&ensp;།")
                   ; remove final colon
                   (str/replace  #":(\s)" "")
                   ; remove any stray spaces
@@ -215,7 +215,7 @@
                   (str/replace #"(\u0F0D|&#xf0d;)" "།")
                   ; replace ka entity
                   (str/replace #"\u0F42" "ག")
-                  (str/replace #"&emsp;&emsp;\u200A" "&emsp;"))]
+                  (str/replace #"&ensp;&ensp;\u200A"  "&ensp;"))]
     res))
 
 (defn transform-sentence-space [md]

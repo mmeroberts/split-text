@@ -342,15 +342,35 @@
   (output-uniglot-markdown "Himlit" "bo" "Revelation")
   ,)
 
+(defn get-header [source1 lang1 source2 lang2 book]
+  (get-text (sort-by :index
+                     (distinct
+                       (flatten
+                         (conj (db/fetch-header-lang db/conn source1 book lang1)
+                               (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1))
+                                 (db/fetch-header-lang db/conn "Himlit" book "english"))
+                               (db/fetch-header-lang db/conn source2 book lang2)))))))
 
+(defn get-header2 [sources book]
+   (sort-by :index
+                     (distinct
+                       (flatten
+                         (for [[source lang] sources]
+                           (do (prn source lang)
+                             (conj (db/fetch-header-lang db/conn source book lang)
+                               (when (and (= source "Himlit") (contains? #{ "bo" "wylie" } lang))
+                                 (db/fetch-header-lang db/conn "Himlit" book "english")))))))))
+
+(comment
+  (get-header2 #{["Himlit" "bo"] ["Himlit" "english"] ["BSB" "english"]} "Revelation")
+  (for [[source lang] #{["Himlit" "bo"] ["Himlit" "english"]}] (prn source lang))
+  (db/fetch-header-lang db/conn "WEB" "Revelation" "english")
+  ,)
 
 
 (defn output-markdown [format source1 lang1 source2 lang2 book]
   (conf/debug "ODM: " source1 lang1 source2 lang2 book)
-  (let [header (get-text (sort-by :index (distinct(flatten (conj (db/fetch-header-lang db/conn source1 book lang1)
-                                                        (when (and (= source1 "Himlit") (contains? #{ "bo" "wylie" } lang1))
-                                                          (db/fetch-header-lang db/conn "Himlit" book "english"))
-                                                        (db/fetch-header-lang db/conn source2 book lang2))))))
+  (let [header (get-header source1 lang1 source2 lang2 book)
         book-text (get-book format source1 lang1 source2 lang2 book)]
     (flatten [header book-text])))
 
