@@ -412,7 +412,7 @@
   ;(transform  [ALL ALL :lines ALL :line] decode split-text.db/y)
   (fetch-books conn "GoodNewsForYou")
   (fetch-book conn "GoodNewsForYou" "Book1" "bo")
-  (fetch-book conn "Himlit" "Revelation" "wylie")
+  (fetch-book conn "Himlit" "Revelation" "bo")
   (fetch-header-lang conn "BSB" "Revelation" "english")
   (fetch-chapter-numbers conn "Himlit" "Revelation" "bo" )
   (fetch-chapter-numbers conn "Himlit" "Mark" "bo" )

@@ -35,7 +35,7 @@
     :default "normal"
     :validate [#(contains? #{"normal" "parallel"} % ) "Must be either normal or parallel"]]
    ["-n" "--navigation" "Use navigation"]
-   ["-r" "--reference REF" "The format of the output document"
+   ["-r" "--reference REF" "The chapters to include"
     :default "ALL"
     :validate [#(validate-reference % ) "Must ALL or chapter number or n-m for chapter range"]]
 
@@ -88,7 +88,7 @@
       ;; custom validation on arguments
 
       (and (= 1 (count arguments))
-           (#{"bo" "eng" "wy" "web" "bsb" "back" "bowy" "wyeng" "wybsb" "bobsb" "boeng"  "boweb" "boback"} (first arguments)))
+           (#{"bo" "eng" "wy" "web" "bsb" "back" "bowy" "wyeng" "wybsb" "bobsb" "boeng"  "boweb" "boback" "bowyeng" "bowybsb" "boengbsb" "bobsbwy"} (first arguments)))
       {:style (first arguments) :options options}
       (or (:title options) (:config options)) ; catch all check - titlemust be defined.
       {:options options}
@@ -146,25 +146,33 @@
                      (= style "boweb") (get-suffix "diglot-web" navigation format reference)
                      (= style "bobsb") (get-suffix "diglot-bsb" navigation format reference)
                      (= style "wybsb") (get-suffix "wylie-bsb" navigation format reference)
-                     (= style "boback") (get-suffix "diglot-back" navigation format reference))
+                     (= style "boback") (get-suffix "diglot-back" navigation format reference)
+                     (= style "bowyeng") (get-suffix "triglot" navigation format reference)
+                     (= style "bobsbwy") (get-suffix "triglot-bsb-wy" navigation format reference)
+                     (= style "boengbsb") (get-suffix "triglot-eng-bsb" navigation format reference)
+                     (= style "bowybsb") (get-suffix "triglot-bsb" navigation format reference))
         outputfile (construct-filename directory  conf/pre-published file (str "-" suffix "." output))
         title-out (str title "-" suffix)]
     (conf/debug outputfile)
     (when (not= exit 0)
       (case style
-        "bo" (spio/output-html (mdo/output-book book "Himlit" "bo" nil nil format) title-out outputfile)
-        "eng" (spio/output-html (mdo/output-book book "Himlit" "english" nil nil format) title-out outputfile)
-        "wy" (spio/output-html (mdo/output-book book "Himlit" "wylie" nil nil format) title-out outputfile)
-        "web" (spio/output-html (mdo/output-book book "WEB" "english" nil nil format) title-out outputfile)
-        "bsb" (spio/output-html (mdo/output-book book "BSB" "english" nil nil format) title-out outputfile)
-        "back" (spio/output-html (mdo/output-book book "Himlit" "back" nil nil format) title-out outputfile)
-        "bowy" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "wylie" format) title-out outputfile)
-        "wyeng" (spio/output-html (mdo/output-book book "Himlit" "wylie" "Himlit" "english" format) title-out outputfile)
-        "boeng" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "english" format) title-out outputfile)
-        "boweb" (spio/output-html (mdo/output-book book "Himlit" "bo" "WEB" "english" format) title-out outputfile)
-        "bobsb" (spio/output-html (mdo/output-book book "Himlit" "bo" "BSB" "english" format) title-out outputfile)
-        "wybsb" (spio/output-html (mdo/output-book book "Himlit" "wylie" "BSB" "english" format) title-out outputfile)
-        "boback" (spio/output-html (mdo/output-book book "Himlit" "bo" "Himlit" "back" format) title-out outputfile)))))
+        "bo" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"}]) title-out outputfile)
+        "eng" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "eng"}]) title-out outputfile)
+        "wy" (spio/output-html (mdo/output-book book format  [{:source "Himlit" :lang "wylie"}]) title-out outputfile)
+        "web" (spio/output-html (mdo/output-book book  format [{:source "WEB" :lang "english"}]) title-out outputfile)
+        "bsb" (spio/output-html (mdo/output-book book format [{:source "BSB" :lang "english"}]) title-out outputfile)
+        "back" (spio/output-html (mdo/output-book book format  [{:source "Himlit" :lang "back"}]) title-out outputfile)
+        "bowy" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"}]) title-out outputfile)
+        "wyeng" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]) title-out outputfile)
+        "boeng" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "english"}]) title-out outputfile)
+        "boweb" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "WEB" :lang "english"}]) title-out outputfile)
+        "bobsb" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "BSB" :lang "english"}]) title-out outputfile)
+        "wybsb" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]) title-out outputfile)
+        "boback" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "back"}]) title-out outputfile)
+        "boengbsb" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "english"} {:source "BSB" :lang "english"}]) title-out outputfile)
+        "bowyeng" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]) title-out outputfile)
+        "bobsbwy" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "BSB" :lang "english"} {:source "Himlit" :lang "wylie"}]) title-out outputfile)
+        "bowybsb" (spio/output-html (mdo/output-book book format [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"} {:source "BSB" :lang "english"}]) title-out outputfile)))))
 
 (defn -main [& args]
   (let [{:keys [style options exit-message ok?]} (validate-args args)]
@@ -196,7 +204,9 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bobsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn" "-F" "parallel" "bobsb")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wyeng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bowyeng")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn" "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\OT\\Genesis\\config\\config.edn" "bo")
