@@ -186,6 +186,8 @@
   (let [res (-> l
                   ; space between normal sentances
                   (str/replace #"(\u0F0D|&#xf0d;|\u0F42)(\"|&quot;)?(?!$)(\s+)(?!$)" "$1$2&ensp;")
+                ;  she before a bracket
+                  (str/replace  #"(།|u0F0D|&#xf0d;)(\[|\()" "$1&ensp;$2")
                   ; space after ga with she at start of next sentence
                   (str/replace  #"(\u0F0D)(\)|\])" "$1$2&ensp;")
                   ; space after ga with she at start of next sentence

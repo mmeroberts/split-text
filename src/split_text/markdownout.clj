@@ -95,13 +95,7 @@
 
 
 (defn verse [l]
-  (let [lang (:lang l)
-        text (process-text l)]
-    text))
-
-(defn h4 [l]
-  (verse l))
-
+  (process-text l))
 
 
 
@@ -126,11 +120,11 @@
   [ v1 v2 ]
   (not (nil? (some (set v1) v2))))
 
-
+ 
 (defn find-matching-entry
   "Given and entry find an similar one in the entries nth instance"
   [entry entries idx]
-  (prn "FME:" entry idx)
+  ;(prn "FME:" entry idx)
   (let [{:keys [type verse-nos chapter-no]}entry]
     (filter #(and (= (:type %) type) (match-verse-nos (:verse-nos %) verse-nos) (= (:chapter-no %) chapter-no)) (nth entries idx))))
 
@@ -201,6 +195,11 @@
     (let [{:keys [source lang]} source-in]
       (db/fetch-book db/conn source book lang))))
 
+(comment
+  (def entries (get-book-entries "Revelation" [{:source "Himlit", :lang "bo"} {:source "Himlit", :lang "english"}]))
+  (select [ALL ALL #(= (:chapter-no %) 1)] entries)
+  ,)
+
 
 (defn get-book [book layout-fn sources]
   (let [book-entries (get-book-entries book sources)
@@ -208,7 +207,7 @@
         ref (:reference @conf/config-atom)
         chapters (conf/handle-reference chapters-in ref)
         text (for [ch chapters]
-               (let [entries (for [book book-entries] (select [ALL #(= (:chapter-no %) ch)] book))]
+               (let [entries (for [b book-entries] (select [ALL #(= (:chapter-no %) ch)] b))]
                  (handle-chapter book layout-fn ch entries (count sources))))]
     text))
 

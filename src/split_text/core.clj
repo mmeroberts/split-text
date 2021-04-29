@@ -18,24 +18,14 @@
         ;(re-find #"\d+:\d+$" val) true ; indicates chaper:verse
         :else false))
 
-(def styles
-  [{:style "bo" :sources [{:source "Himlit" :lang "bo"}]}
-   {:style "eng" :sources [{:source "Himlit" :lang "eng"}]}
-   {:style "wy" :sources [{:source "Himlit" :lang "wylie"}]}
-   {:style "web" :sources [{:source "WEB" :lang "english"}]}
-   {:style "bsb" :sources [{:source "BSB" :lang "english"}]}
-   {:style "back" :sources [{:source "Himlit" :lang "back"}]}
-   {:style "bo-wy" :sources [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"}]}
-   {:style "wy-eng" :sources [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]}
-   {:style "bo-eng" :sources [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "english"}]}
-   {:style "bo-web" :sources [{:source "Himlit" :lang "bo"} {:source "WEB" :lang "english"}]}
-   {:style "bo-bsb" :sources [{:source "Himlit" :lang "bo"} {:source "BSB" :lang "english"}]}
-   {:style "wy-bsb" :sources [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]}
-   {:style "bo-back" :sources [{:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "back"}]}
-   {:style "bo-eng-bsb" :sources [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "english"} {:source "BSB" :lang "english"}]}
-   {:style "bo-wy-eng" :sources [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"} {:source "Himlit" :lang "english"}]}
-   {:style "bo-bsb-wy" :sources [{:source "Himlit" :lang "bo"} {:source "BSB" :lang "english"} {:source "Himlit" :lang "wylie"}]}
-   {:style "bo-wy-bsb" :sources [{:source "Himlit" :lang "bo"} {:source "Himlit" :lang "wylie"} {:source "BSB" :lang "english"}]}])
+
+(def style-portions
+  [{:style "bo" :source {:source "Himlit" :lang "bo"}}
+   {:style "eng" :source {:source "Himlit" :lang "english"}}
+   {:style "wy" :source {:source "Himlit" :lang "wylie"}}
+   {:style "web" :source {:source "WEB" :lang "english"}}
+   {:style "bsb" :source {:source "BSB" :lang "english"}}
+   {:style "back" :source {:source "Himlit" :lang "back"}}])
 
 (def explanations
   {:bo "Tibetan"
@@ -81,7 +71,7 @@
    ["-h" "--help"]])
 
 (defn get-style-usage []
-  (let [style-names (select [ALL :style] styles)]
+  (let [style-names (select [ALL :style] style-portions)]
     (for [style style-names]
       (let [style-set (str/split style #"\-")
             ss (doall (for [s style-set]
@@ -121,8 +111,7 @@
   should exit (with a error message, and optional ok status), or a map
   indicating the action the program should take and the options provided."
   [args]
-  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)
-        style-names (set (select [ALL :style] styles))]
+  (let [{:keys [options arguments errors summary]} (cli/parse-opts args cli-options)]
     (cond
       (:help options) ; help => exit OK with usage summary
       {:exit-message (usage summary) :ok? true}
@@ -130,8 +119,7 @@
       {:exit-message (error-msg errors)}
       ;; custom validation on arguments
 
-      (and (= 1 (count arguments))
-           (style-names (first arguments)))
+      (= 1 (count arguments))
       {:style (first arguments) :options options}
       (or (:title options) (:config options)) ; catch all check - titlemust be defined.
       {:options options}
@@ -173,16 +161,29 @@
         ref (str "-chs-" reference)]
     (str suffix nav form ref)))
 
+(defn expand-style [style]
+  (let [portions (str/split style #"\-")
+        w (vec (flatten(for [p portions]
+                         (select [ALL #(= (:style %) p) :source] style-portions))))]
+    w))
+
+#_  (comment
+      (expand-style "bo-bsb-eng")
+      (str/split "bo" #"\-")
+      (select [ALL #(= (:style %) "bo")] style-portions)
+      ,)
+
+
 (defn output-document [style options]
   (tap> (str options))
   (let [{:keys [file title book directory navigation format output reference]} (conf/get-config options)
-        x (prn "$^" reference "$")
         suffix (get-suffix style navigation format reference)
         outputfile (construct-filename directory  conf/pre-published file (str "-" suffix "." output))
-        title-out (str title "-" suffix)]
+        title-out (str title "-" suffix)
+        style-expanded (expand-style style)]
     (conf/debug outputfile)
     (when (not= exit 0)
-      (spio/output-html (mdo/output-book book format (vec(flatten(select [ALL #(= (:style %) style) :sources] styles)))) title-out outputfile))))
+      (spio/output-html (mdo/output-book book format style-expanded) title-out outputfile))))
 
 (defn -main [& args]
   (let [{:keys [style options exit-message ok?]} (validate-args args)]
@@ -212,11 +213,11 @@
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "back")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boeng")
   ;(-main "-f" "2020-Revelation-Final" "-d" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation" "-t" "Revelation" "boback")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo-bsb")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo-eng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo-web")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn" "-F" "parallel" "bo-bsb")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wyeng")
-  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bowyeng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "wy-eng")
+  (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Revelation\\config\\config.edn"  "bo-wy-eng")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\NT\\Gospels\\2020-ERV-Mark\\config\\config.edn" "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\GoodNewsForYou\\Book1\\config\\config.edn" "bo")
   (-main "-c" "C:\\Users\\MartinRoberts\\Sync\\OT\\Genesis\\config\\config.edn" "bo")
